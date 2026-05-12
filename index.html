@@ -514,13 +514,17 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbz79nfBkr3BoZHhAD542F5q
 async function apiCall(action, data=null){
   try{
     if(action==='getAll'||action==='ping'){
-      const res=await fetch(`${API_URL}?action=${action}`);
+      const res=await fetch(`${API_URL}?action=${action}`, {redirect:'follow'});
       return await res.json();
     } else {
-      const res=await fetch(`${API_URL}?action=${action}`,{
-        method:'POST',
-        body:JSON.stringify(data),
-        headers:{'Content-Type':'text/plain'}
+      // Apps Script POST: send data as URL param to avoid CORS preflight
+      const body = data ? JSON.stringify(data) : '{}';
+      const url = `${API_URL}?action=${action}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        body: body,
+        headers: {'Content-Type': 'text/plain;charset=utf-8'},
+        redirect: 'follow'
       });
       return await res.json();
     }
