@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多會議記錄系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<style>
+:root{
+  --bg:#F4F2EE;--s:#FFF;--s2:#EDEAE4;
+  --bd:#DDD9D1;--bd2:#C6C1B8;
+  --tx:#1A1917;--tx2:#585450;--tx3:#8A8680;
+  --bar:#22211F;
+  --p:#4A42B0;--pl:#EEEDFE;--pm:#7F77DD;
+  --t:#0D6B52;--tl:#E0F4EC;--tm:#1B9B71;
+  --am:#7D4B09;--al:#FAF0DA;
+  --rd:#9E2B2B;--rl:#FCEBEB;
+  --gn:#255009;--gl:#E8F2DC;
+  --r:10px;--rs:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.6}
+.app{display:flex;min-height:100vh}
+
+.sb{width:230px;flex-shrink:0;background:var(--bar);display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:300}
+.sb-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sb-logo h1{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:600;color:#F2F0EC;line-height:1.4}
+.sb-logo p{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px}
+.sb-sync{display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:11px;color:rgba(255,255,255,.4);border-bottom:1px solid rgba(255,255,255,.06)}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:#8A8680;flex-shrink:0;transition:.3s}
+.sync-dot.ok{background:#1B9B71}
+.sync-dot.err{background:#9E2B2B}
+.sync-dot.busy{background:#EF9F27;animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-sec{padding:9px 14px 3px;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.06em}
+.sb-list{flex:1;overflow-y:auto;padding-bottom:8px}
+.sb-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;transition:.15s;border-left:3px solid transparent}
+.sb-item:hover{background:rgba(255,255,255,.05)}
+.sb-item.active{background:rgba(255,255,255,.09);border-left-color:var(--pm)}
+.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sb-info{flex:1;min-width:0}
+.sb-name{font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-date{font-size:10px;color:rgba(255,255,255,.35);margin-top:1px}
+.sb-badge{font-size:9px;padding:1px 5px;border-radius:999px}
+.sb-actions{padding:8px 10px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:5px}
+.sb-btn{width:100%;padding:8px;font-size:11px;border-radius:var(--rs);cursor:pointer;font-family:inherit;border:none;text-align:center;transition:.15s}
+.sb-btn-add{background:rgba(255,255,255,.1);color:rgba(255,255,255,.75)}
+.sb-btn-add:hover{background:rgba(255,255,255,.18)}
+.sb-btn-export{background:var(--tm);color:#fff}
+.sb-btn-export:hover{background:#0F6E52}
+.sb-bot{padding:8px 14px 12px;font-size:10px;color:rgba(255,255,255,.2);line-height:1.6}
+
+.main{margin-left:230px;flex:1;padding:22px 26px;max-width:calc(100vw - 230px)}
+
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;text-align:center;gap:10px}
+.center-icon{font-size:44px;opacity:.3}
+.center-title{font-size:17px;font-weight:500;color:var(--tx2)}
+.center-desc{font-size:13px;color:var(--tx3);max-width:300px;line-height:1.7}
+
+/* Meeting header */
+.mtg-hdr{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:16px 20px;margin-bottom:14px}
+.mtg-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mtg-title{font-size:17px;font-weight:500;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.mtg-meta{display:flex;gap:12px;flex-wrap:wrap}
+.mtg-meta-item{font-size:12px;color:var(--tx3);display:flex;align-items:center;gap:4px}
+.mtg-meta-item strong{color:var(--tx2)}
+.mtg-acts{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
+.perm-pill{font-size:11px;padding:2px 9px;border-radius:999px;font-weight:500}
+.pp-host{background:#EEEDFE;color:#3C3489}
+.pp-edit{background:#E0F4EC;color:#0D6B52}
+.pp-view{background:#EDEAE4;color:#585450}
+
+.tabs{display:flex;gap:2px;margin-bottom:14px;background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:4px}
+.tab{flex:1;padding:7px 4px;font-size:13px;border:none;background:none;color:var(--tx3);cursor:pointer;border-radius:var(--rs);transition:.15s;font-family:inherit;text-align:center}
+.tab:hover{background:var(--s2);color:var(--tx2)}
+.tab.active{background:var(--bar);color:#F2F0EC;font-weight:500}
+.tab-badge{font-size:10px;background:var(--pm);color:#fff;padding:1px 5px;border-radius:999px;margin-left:3px}
+.tc{display:none}.tc.active{display:block}
+
+.btn{padding:7px 13px;font-size:13px;border-radius:var(--rs);border:1px solid var(--bd2);background:var(--s);color:var(--tx2);cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
+.btn:hover{background:var(--s2)}.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--bar);color:#F2F0EC;border-color:var(--bar)}.btn-primary:hover{background:#363430}
+.btn-ai{background:var(--pl);color:var(--p);border-color:#AFA9EC;font-weight:500}.btn-ai:hover{background:#E2E0FA}
+.btn-danger{background:var(--rl);color:var(--rd);border-color:#F09595}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+.card{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:17px 19px;margin-bottom:12px}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;flex-wrap:wrap;gap:6px}
+.card-hdr h3{font-size:14px;font-weight:500}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
+.stat{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:13px 15px}
+.stat-n{font-size:21px;font-weight:500;font-family:'Noto Serif TC',serif}
+.stat-l{font-size:11px;color:var(--tx3);margin-top:3px}
+
+.alert{display:flex;align-items:flex-start;gap:9px;padding:10px 13px;border-radius:var(--rs);margin-bottom:11px;font-size:13px;border:1px solid;line-height:1.6}
+.alert-warn{background:var(--al);color:var(--am);border-color:#FAC775}
+.alert-ok{background:var(--gl);color:var(--gn);border-color:#C0DD97}
+.alert-info{background:var(--pl);color:var(--p);border-color:#AFA9EC}
+
+.sum-box{border-left:3px solid var(--pm);padding:12px 14px;background:var(--pl);border-radius:0 var(--rs) var(--rs) 0;font-size:13px;line-height:1.85;color:var(--tx);min-height:70px}
+.sum-box[contenteditable]{outline:none;cursor:text}
+.sum-box:empty::before{content:attr(data-ph);color:var(--tx3)}
+
+.perm-matrix{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+.perm-matrix th{padding:8px 10px;text-align:left;font-size:11px;font-weight:500;color:var(--tx3);border-bottom:1px solid var(--bd);background:var(--s2)}
+.perm-matrix td{padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
+.perm-matrix tr:last-child td{border-bottom:none}
+.perm-check{color:var(--tm);font-size:15px}
+.perm-x{color:var(--tx3)}
+
+.item-list{display:flex;flex-direction:column;gap:5px}
+.item{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--bg);transition:.15s}
+.item:hover{border-color:var(--bd2)}
+.item.done{opacity:.5}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.dot-p{background:var(--pm)}.dot-t{background:var(--tm)}
+.ibody{flex:1;min-width:0}
+.itext{font-size:13px;line-height:1.45;word-break:break-all}
+.itext.struck{text-decoration:line-through;color:var(--tx3)}
+.imeta{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px}
+.pill{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);background:var(--s);color:var(--tx3)}
+.pill-red{background:var(--rl);color:var(--rd);border-color:#F09595}
+.chk{width:17px;height:17px;border-radius:4px;border:1.5px solid var(--bd2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;background:var(--s);font-size:10px;color:transparent;transition:.15s}
+.chk:hover{border-color:var(--tm)}.chk.on{background:var(--tm);border-color:var(--tm);color:#fff}
+.xbtn{font-size:13px;color:var(--tx3);cursor:pointer;padding:2px 4px;border-radius:4px;background:none;border:none;transition:.15s;line-height:1;flex-shrink:0}
+.xbtn:hover{background:var(--rl);color:var(--rd)}
+
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.tag{font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--bd);cursor:pointer;background:var(--s);color:var(--tx3);transition:.15s}
+.tag.on{background:var(--pl);color:var(--p);border-color:#AFA9EC}
+
+.add-form{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;padding:10px;background:var(--s2);border-radius:var(--rs);border:1px dashed var(--bd2)}
+.add-form input,.add-form select{padding:6px 9px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:inherit}
+.add-form input:focus,.add-form select:focus{outline:none;border-color:var(--pm)}
+.grow{flex:1;min-width:130px}
+
+.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px}
+.att{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--bg);transition:.15s}
+.att.clickable{cursor:pointer}.att.clickable:hover{border-color:var(--bd2)}
+.att.present{background:var(--gl);border-color:#C0DD97}
+.att.late{background:var(--al);border-color:#FAC775}
+.av{width:31px;height:31px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.av-a{background:#CECBF6;color:#3C3489}.av-b{background:#9FE1CB;color:#085041}
+.av-c{background:#F5C4B3;color:#712B13}.av-d{background:#B5D4F4;color:#0C447C}
+.av-e{background:#F4C0D1;color:#72243E}.av-f{background:#C0DD97;color:#27500A}
+.att-info{flex:1;min-width:0}
+.att-name{font-size:13px;font-weight:500}
+.att-dept{font-size:10px;color:var(--tx3)}
+.att-perm{font-size:10px;padding:1px 6px;border-radius:999px;flex-shrink:0}
+.ap-host{background:#EEEDFE;color:#4A42B0}
+.ap-edit{background:#E0F4EC;color:#0D6B52}
+.ap-view{background:#EDEAE4;color:#585450}
+
+.upload-zone{border:1.5px dashed var(--bd2);border-radius:var(--rs);padding:18px;text-align:center;cursor:pointer;background:var(--s2);transition:.2s;margin-top:8px}
+.upload-zone:hover{border-color:var(--pm);background:var(--pl)}
+.paste-area{width:100%;min-height:110px;padding:10px 12px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:monospace;resize:vertical;line-height:1.6}
+.paste-area:focus{outline:none;border-color:var(--pm)}
+
+.pwd-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+.pwd-row label{font-size:12px;width:70px;flex-shrink:0}
+.pwd-input{flex:1;min-width:150px;padding:7px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:inherit}
+.pwd-tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
+.tag-host{background:#EEEDFE;color:#3C3489}
+.tag-edit{background:#E0F4EC;color:#0D6B52}
+.tag-view{background:#EDEAE4;color:#585450}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--s);border-radius:var(--r);padding:22px 24px;max-width:460px;width:92%;position:relative;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:500;margin-bottom:14px}
+.modal-close{position:absolute;top:14px;right:14px;font-size:17px;cursor:pointer;color:var(--tx3);background:none;border:none;line-height:1}
+.fg{margin-bottom:10px}
+.fg label{font-size:12px;color:var(--tx3);display:block;margin-bottom:4px}
+.fg input,.fg select,.fg textarea{width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:inherit}
+.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--pm)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+
+/* Login screen */
+.login-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;align-items:center;justify-content:center}
+.login-screen.open{display:flex}
+.login-card{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:26px 28px;max-width:400px;width:92%}
+.login-card h3{font-size:15px;font-weight:500;margin-bottom:4px}
+.login-card p{font-size:12px;color:var(--tx3);margin-bottom:16px;line-height:1.6}
+.login-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.login-meta span{font-size:12px;color:var(--tx2);background:var(--s2);padding:3px 9px;border-radius:var(--rs);border:1px solid var(--bd)}
+.login-sec{padding:11px 13px;border-radius:var(--rs);margin-bottom:10px;border:1px solid}
+.ls-name{background:var(--gl);border-color:#C0DD97}
+.ls-pwd{background:var(--pl);border-color:#AFA9EC}
+.ls-title{font-size:12px;font-weight:500;margin-bottom:7px}
+.ls-name .ls-title{color:var(--gn)}
+.ls-pwd .ls-title{color:var(--p)}
+.login-input{width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:#fff;font-family:inherit}
+.login-input:focus{outline:none;border-color:var(--pm)}
+.login-error{font-size:12px;color:var(--rd);margin:6px 0;display:none}
+
+.toast{position:fixed;bottom:18px;right:18px;background:#22211F;color:#F2F0EC;padding:9px 15px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:300px}
+.toast.show{opacity:1}
+
+@media(max-width:800px){
+  .sb{width:200px}.main{margin-left:200px;padding:14px;max-width:calc(100vw - 200px)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media print{
+  .sb,.mtg-acts,.add-form,.upload-zone,.tabs,.xbtn,.chk,.tags,.modal-bg,.toast,.login-screen{display:none!important}
+  .main{margin-left:0;padding:0}.card{break-inside:avoid}body{background:#fff}
+}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h3 id="loginTitle">🔐 進入會議</h3>
+    <p>此會議設有存取限制，請選擇方式進入</p>
+    <div class="login-meta" id="loginMeta"></div>
+    <div class="login-sec ls-name">
+      <div class="ls-title">👤 方式一：輸入姓名（人員名單）</div>
+      <input class="login-input" id="loginName" placeholder="輸入你的姓名" onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="font-size:11px;color:var(--t);margin-top:4px">系統自動比對，套用對應權限</div>
+    </div>
+    <div class="login-sec ls-pwd">
+      <div class="ls-title">🔑 方式二：輸入密碼</div>
+      <div id="loginPwdFields"></div>
+    </div>
+    <div class="login-error" id="loginError">姓名不在名單中，或密碼錯誤</div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn" onclick="cancelLogin()" style="flex:1">返回</button>
+      <button class="btn btn-primary" onclick="doLogin()" style="flex:2">進入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-bg" id="mtgModal" onclick="if(event.target===this)closeModal('mtgModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('mtgModal')">✕</button>
+    <h3 id="mtgModalTitle">新增會議</h3>
+    <div class="frow">
+      <div class="fg"><label>會議名稱 *</label><input id="nm-title" placeholder="115年回購計畫推廣案"></div>
+      <div class="fg"><label>會議日期</label><input id="nm-date" type="date"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>主持人</label><input id="nm-host" placeholder="姓名 / 職稱"></div>
+      <div class="fg"><label>地點</label><input id="nm-loc" placeholder="會議室 / 線上"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>專案名稱</label><input id="nm-proj" placeholder="專案名稱"></div>
+      <div class="fg"><label>截止日</label><input id="nm-dl" type="date"></div>
+    </div>
+    <div style="border-top:1px solid var(--bd);margin:12px 0;padding-top:12px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:9px">🔐 存取密碼<span style="font-size:11px;color:var(--tx3);font-weight:400;margin-left:6px">（留空＝所有人可看）</span></div>
+      <div class="pwd-row">
+        <label><span class="pwd-tag tag-host">主持人</span></label>
+        <input class="pwd-input" type="password" id="nm-ph" placeholder="可全部修改">
+        <button class="btn btn-sm" onclick="togglePwd('nm-ph')">顯示</button>
+      </div>
+      <div class="pwd-row">
+        <label><span class="pwd-tag tag-edit">編輯者</span></label>
+        <input class="pwd-input" type="password" id="nm-pe" placeholder="可修改內容">
+        <button class="btn btn-sm" onclick="togglePwd('nm-pe')">顯示</button>
+      </div>
+      <div class="pwd-row">
+        <label><span class="pwd-tag tag-view">檢視者</span></label>
+        <input class="pwd-input" type="password" id="nm-pv" placeholder="只能查看">
+        <button class="btn btn-sm" onclick="togglePwd('nm-pv')">顯示</button>
+      </div>
+      <p style="font-size:11px;color:var(--tx3);margin-top:6px">會議列表所有人都看得到，密碼只控制進入後能看到什麼內容。</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('mtgModal')">取消</button>
+      <button class="btn btn-primary" id="mtgSaveBtn" onclick="saveMtgModal()">建立會議</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="attModal" onclick="if(event.target===this)closeModal('attModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('attModal')">✕</button>
+    <h3>新增與會人員</h3>
+    <div class="frow">
+      <div class="fg"><label>姓名 *</label><input id="att-name" placeholder="姓名"></div>
+      <div class="fg"><label>職稱 / 部門</label><input id="att-dept" placeholder="部門"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Email（選填）</label><input id="att-email" type="email" placeholder="email@example.com"></div>
+      <div class="fg"><label>角色 / 權限</label>
+        <select id="att-perm" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs)">
+          <option value="host">主持人（可全改）</option>
+          <option value="edit" selected>編輯者（可改內容）</option>
+          <option value="view">檢視者（僅查看）</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('attModal')">取消</button>
+      <button class="btn btn-primary" onclick="addAttendee()">新增</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="confirmModal">
+  <div class="modal" style="max-width:340px">
+    <p id="confirmMsg" style="font-size:14px;color:var(--tx);margin-bottom:16px;line-height:1.6"></p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('confirmModal');if(window._cfRej)window._cfRej()">取消</button>
+      <button class="btn btn-danger" id="confirmOkBtn" onclick="closeModal('confirmModal');if(window._cfRes)window._cfRes()">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app">
+<aside class="sb">
+  <div class="sb-logo">
+    <h1>多會議記錄系統</h1>
+    <p>雲端共用版 · Google Sheets</p>
+  </div>
+  <div class="sb-sync">
+    <div class="sb-status-dot" id="syncDot" style="width:6px;height:6px;border-radius:50%;background:#EF9F27;flex-shrink:0"></div>
+    <span id="syncLabel">連線中⋯</span>
+  </div>
+  <div class="sb-sec">所有人共用的會議列表</div>
+  <div class="sb-list" id="sbList"></div>
+  <div class="sb-actions">
+    <button class="sb-btn sb-btn-add" onclick="openNewMtgModal()">＋ 新增會議</button>
+    <button class="sb-btn sb-btn-export" onclick="refreshAll()">↻ 重新整理</button>
+  </div>
+  <div class="sb-bot">資料存於 Google Sheets<br>三層權限：主持 / 編輯 / 檢視<br>密碼制 + 人員名單制</div>
+</aside>
+
+<main class="main">
+  <div class="center" id="emptyState" style="display:flex">
+    <div class="center-icon">📋</div>
+    <div class="center-title" id="emptyTitle">連線中⋯</div>
+    <div class="center-desc" id="emptyDesc">正在從 Google Sheets 載入會議資料</div>
+  </div>
+
+  <div class="center" id="lockedState" style="display:none">
+    <div class="center-icon">🔒</div>
+    <div class="center-title" id="lockedTitle">此會議受密碼保護</div>
+    <div class="center-desc">請輸入密碼或姓名進入</div>
+    <div id="lockedMeta" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px"></div>
+    <button class="btn btn-primary" onclick="openLoginScreen()" style="margin-top:12px;padding:9px 26px">🔑 輸入密碼進入</button>
+  </div>
+
+  <div id="mtgView" style="display:none">
+    <div class="mtg-hdr">
+      <div class="mtg-hdr-top">
+        <div>
+          <div class="mtg-title">
+            <span id="vTitle">—</span>
+            <span class="perm-pill" id="permPill"></span>
+          </div>
+          <div class="mtg-meta">
+            <div class="mtg-meta-item">📅 <strong id="vDate">—</strong></div>
+            <div class="mtg-meta-item">👤 <strong id="vHost">—</strong></div>
+            <div class="mtg-meta-item">📍 <strong id="vLoc">—</strong></div>
+            <div class="mtg-meta-item">🗂 <strong id="vProject">—</strong></div>
+          </div>
+        </div>
+        <div class="mtg-acts">
+          <button class="btn btn-sm" id="btnEdit" onclick="openEditMtgModal()">編輯資訊</button>
+          <button class="btn btn-sm" onclick="exportTxt()">匯出 TXT</button>
+          <button class="btn btn-sm btn-danger" id="btnDel" onclick="delMeeting()">刪除</button>
+          <button class="btn btn-sm btn-primary" id="btnSave" onclick="saveNow()">儲存</button>
+        </div>
+      </div>
+      <div id="vDeadline" style="display:none;margin-top:10px" class="alert alert-warn">
+        <span>⚠</span><span id="vDeadlineMsg"></span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(this,'overview')">概覽</button>
+      <button class="tab" onclick="switchTab(this,'checkin')">出席打卡<span class="tab-badge" id="tbCheckin">0/0</span></button>
+      <button class="tab" onclick="switchTab(this,'summary')">摘要決策</button>
+      <button class="tab" onclick="switchTab(this,'todo')">待辦事項<span class="tab-badge" id="tbTodo">0</span></button>
+      <button class="tab" id="tabAI" onclick="switchTab(this,'ai')">AI 分析</button>
+      <button class="tab" onclick="switchTab(this,'perm')">🔐 權限</button>
+    </div>
+
+    <div>
+      <!-- Overview -->
+      <div class="tc active" id="tc-overview">
+        <div class="stats">
+          <div class="stat"><div class="stat-n" id="ovPresent">0/0</div><div class="stat-l">出席人數</div></div>
+          <div class="stat"><div class="stat-n" id="ovDec">0</div><div class="stat-l">決策事項</div></div>
+          <div class="stat"><div class="stat-n" id="ovTodo">0</div><div class="stat-l">待辦未完成</div></div>
+          <div class="stat"><div class="stat-n" id="ovDays">—</div><div class="stat-l">距截止日</div></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>近期待辦</h3><button class="btn btn-sm" onclick="switchTab(null,'todo')">查看全部</button></div>
+          <div class="item-list" id="ovTodoList"><p style="font-size:13px;color:var(--tx3)">尚無待辦</p></div>
+        </div>
+      </div>
+
+      <!-- Checkin -->
+      <div class="tc" id="tc-checkin">
+        <div class="card">
+          <div class="card-hdr">
+            <h3>與會人員 <span id="checkinCnt" style="font-size:12px;color:var(--tx3);font-weight:400"></span></h3>
+            <div style="display:flex;gap:6px" id="attActions">
+              <button class="btn btn-sm" onclick="openModal('attModal')">＋ 新增</button>
+              <button class="btn btn-sm" onclick="checkAll()">全部簽到</button>
+            </div>
+          </div>
+          <div class="att-grid" id="attGrid"></div>
+          <p id="noAtt" style="font-size:13px;color:var(--tx3);padding:8px 0">尚未新增與會人員</p>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>打卡記錄</h3><button class="btn btn-sm btn-danger" id="btnClearLog" onclick="clearLog()">清除</button></div>
+          <div id="logList" style="font-size:13px;color:var(--tx3)">尚無記錄</div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="tc" id="tc-summary">
+        <div class="card">
+          <div class="card-hdr"><h3>會議摘要</h3><button class="btn btn-sm" id="btnClearSum" onclick="clearSum()">清除</button></div>
+          <div class="sum-box" id="sumBox" contenteditable="true" data-ph="點此輸入或 AI 分析後自動填入⋯"></div>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>決策事項</h3></div>
+          <div class="item-list" id="decList"></div>
+          <p id="noDec" style="font-size:13px;color:var(--tx3);margin-bottom:10px">尚無決策事項</p>
+          <div class="add-form" id="decForm">
+            <input class="grow" id="decTxt" placeholder="輸入決策內容⋯" onkeydown="if(event.key==='Enter')addDec()">
+            <input id="decOwner" placeholder="負責人" style="width:85px">
+            <select id="decCat"><option value="product">產品</option><option value="tech">技術</option><option value="process">流程</option><option value="other">其他</option></select>
+            <button class="btn btn-primary btn-sm" onclick="addDec()">新增</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Todo -->
+      <div class="tc" id="tc-todo">
+        <div class="card">
+          <div class="card-hdr">
+            <h3>待辦事項 <span style="font-size:12px;color:var(--tx3);font-weight:400">共 <b id="todoTotal">0</b> · 未完 <b id="todoPend">0</b></span></h3>
+            <button class="btn btn-sm btn-danger" id="btnClearDone" onclick="clearDone()">清除已完成</button>
+          </div>
+          <div class="tags">
+            <span class="tag on" onclick="ftTodo(this,'all')">全部</span>
+            <span class="tag" onclick="ftTodo(this,'pending')">未完成</span>
+            <span class="tag" onclick="ftTodo(this,'done')">已完成</span>
+            <span class="tag" onclick="ftTodo(this,'urgent')">緊急</span>
+          </div>
+          <div class="item-list" id="todoList"></div>
+          <p id="noTodo" style="font-size:13px;color:var(--tx3);margin-bottom:10px">尚無待辦事項</p>
+          <div class="add-form" id="todoForm">
+            <input class="grow" id="todoTxt" placeholder="輸入待辦事項⋯" onkeydown="if(event.key==='Enter')addTodo()">
+            <input id="todoOwner" placeholder="負責人" style="width:82px">
+            <input id="todoDue" type="date" style="width:128px">
+            <select id="todoUrgent"><option value="0">一般</option><option value="1">緊急</option></select>
+            <button class="btn btn-primary btn-sm" onclick="addTodo()">新增</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI -->
+      <div class="tc" id="tc-ai">
+        <div class="alert alert-info">
+          <span>💡</span>
+          <span>在 Claude.ai 對話裡上傳 .docx，Claude 分析後把 JSON 貼到下方即可。</span>
+        </div>
+        <div class="card">
+          <div class="card-hdr">
+            <h3>貼入 Claude 回覆的 JSON</h3>
+            <button class="btn btn-primary" id="fillBtn" onclick="fillAI()">✦ 填入系統</button>
+          </div>
+          <textarea class="paste-area" id="aiInput" rows="7" placeholder='{
+  "summary": "會議摘要...",
+  "decisions": [{"text":"決策","owner":"負責人","cat":"process"}],
+  "todos": [{"text":"待辦","owner":"負責人","due":"2026-05-31","urgent":true}]
+}'></textarea>
+          <div id="fillRes" style="display:none;margin-top:8px"></div>
+        </div>
+      </div>
+
+      <!-- Perm -->
+      <div class="tc" id="tc-perm">
+        <div class="card">
+          <div class="card-hdr"><h3>🔐 三層權限說明</h3></div>
+          <table class="perm-matrix">
+            <thead><tr><th>功能</th><th><span class="pwd-tag tag-host">主持人</span></th><th><span class="pwd-tag tag-edit">編輯者</span></th><th><span class="pwd-tag tag-view">檢視者</span></th></tr></thead>
+            <tbody>
+              <tr><td>看到會議列表</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td></tr>
+              <tr><td>查看會議內容</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td></tr>
+              <tr><td>新增 / 修改摘要、決策、待辦</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-x">—</span></td></tr>
+              <tr><td>出席打卡</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-x">—</span></td></tr>
+              <tr><td>修改密碼 / 刪除會議</td><td><span class="perm-check">✓</span></td><td><span class="perm-x">—</span></td><td><span class="perm-x">—</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="card-hdr"><h3>⚙ 權限設定</h3><span style="font-size:12px;color:var(--tx3)">主持人才能修改</span></div>
+          <div id="permEditArea"><p style="font-size:13px;color:var(--tx3)">需要主持人權限。</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+
+<script>
+/* ════════ GOOGLE APPS SCRIPT API ════════ */
+const API_URL = 'https://script.google.com/macros/s/AKfycbz79nfBkr3BoZHhAD542F5qEG_vzYsVGXa0V3ZW2qScSYwl5ah1EUMPRrj2tLi4HnVLnw/exec';
+
+async function apiCall(action, data=null){
+  try{
+    if(action==='getAll'||action==='ping'){
+      const res=await fetch(`${API_URL}?action=${action}`);
+      return await res.json();
+    } else {
+      const res=await fetch(`${API_URL}?action=${action}`,{
+        method:'POST',
+        body:JSON.stringify(data),
+        headers:{'Content-Type':'text/plain'}
+      });
+      return await res.json();
+    }
+  }catch(e){
+    return {error:e.message};
+  }
+}
+
+/* ════════ STATE ════════ */
+let meetings={};
+let curId=null, curPerm=null, todoFilter='all', rawDocText='';
+let _loginTargetId=null;
+
+function cur(){return meetings[curId]||null;}
+function canEdit(){return curPerm==='host'||curPerm==='edit';}
+function canHost(){return curPerm==='host';}
+function gId(id){return document.getElementById(id);}
+function gv(id){return(gId(id)||{}).value||'';}
+
+/* ════════ INIT & SYNC ════════ */
+async function init(){
+  setSyncStatus('busy','連線中⋯');
+  const res=await apiCall('getAll');
+  if(res.error){
+    setSyncStatus('err','連線失敗');
+    gId('emptyTitle').textContent='連線失敗';
+    gId('emptyDesc').textContent='請確認網路連線，或重新整理頁面';
+    return;
+  }
+  meetings=res.meetings||{};
+  setSyncStatus('ok','已連線');
+  renderSidebar();
+  // 若沒有會議
+  const keys=Object.keys(meetings);
+  if(keys.length===0){
+    gId('emptyTitle').textContent='尚無會議記錄';
+    gId('emptyDesc').textContent='點擊左側「＋ 新增會議」建立第一場會議';
+  }
+}
+
+async function refreshAll(){
+  setSyncStatus('busy','更新中⋯');
+  const res=await apiCall('getAll');
+  if(res.error){setSyncStatus('err','更新失敗');toast('❌ 更新失敗：'+res.error);return;}
+  meetings=res.meetings||{};
+  setSyncStatus('ok','已更新');
+  renderSidebar();
+  if(curId&&meetings[curId]) renderMeeting();
+  toast('✓ 資料已更新');
+}
+
+async function pushMeeting(m){
+  setSyncStatus('busy','儲存中⋯');
+  const res=await apiCall('save',m);
+  if(res.error){setSyncStatus('err','儲存失敗');toast('❌ 儲存失敗：'+res.error);}
+  else{meetings[m.id]=m;setSyncStatus('ok','已儲存');renderSidebar();}
+  return res;
+}
+
+async function removeMeeting(id){
+  setSyncStatus('busy','刪除中⋯');
+  const res=await apiCall('delete',{id});
+  if(res.error){setSyncStatus('err','刪除失敗');toast('❌ 刪除失敗');}
+  else{delete meetings[id];setSyncStatus('ok','已刪除');renderSidebar();}
+  return res;
+}
+
+function setSyncStatus(status,label){
+  const dot=gId('syncDot'),lbl=gId('syncLabel');
+  const colors={ok:'#1B9B71',busy:'#EF9F27',err:'#9E2B2B'};
+  dot.style.background=colors[status]||'#8A8680';
+  dot.style.animation=status==='busy'?'pulse .8s infinite':'none';
+  lbl.textContent=label;
+}
+
+/* ════════ SIDEBAR ════════ */
+function renderSidebar(){
+  const el=gId('sbList');
+  const list=Object.values(meetings).sort((a,b)=>(b.info.date||'').localeCompare(a.info.date||''));
+  if(!list.length){
+    el.innerHTML='<div style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.3)">尚無會議</div>';
+    return;
+  }
+  el.innerHTML=list.map(m=>{
+    const p=m.pwds||{};
+    const locked=p.host||p.edit||p.view||Object.keys(m.atts||{}).length>0;
+    let dotColor='#1B9B71', badgeBg='#EAF3DE', badgeColor='#255009', badgeTxt='公開';
+    if(m.id===curId&&curPerm){
+      const map={host:['#7F77DD','#EEEDFE','#3C3489','主持人'],edit:['#1D9E75','#EAF3DE','#255009','編輯者'],view:['#8A8680','#EDEAE4','#585450','檢視者']};
+      const info=map[curPerm]||map.view;
+      dotColor=info[0];badgeBg=info[1];badgeColor=info[2];badgeTxt=info[3];
+    } else if(locked){
+      dotColor='#8A8680';badgeBg='#EDEAE4';badgeColor='#585450';badgeTxt='🔒 需驗證';
+    }
+    return `<div class="sb-item ${m.id===curId?'active':''}" onclick="selectMeeting('${m.id}')">
+      <div class="sb-dot" style="background:${dotColor}"></div>
+      <div class="sb-info">
+        <div class="sb-name">${m.info.title||'未命名'}</div>
+        <div class="sb-date">${m.info.date||'未填日期'}</div>
+      </div>
+      <span class="sb-badge" style="background:${badgeBg};color:${badgeColor}">${badgeTxt}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ════════ SELECT & LOGIN ════════ */
+function selectMeeting(id){
+  const m=meetings[id]; if(!m) return;
+  const p=m.pwds||{};
+  const atts=Object.values(m.atts||{});
+  const needLogin=p.host||p.edit||p.view||atts.length>0;
+
+  if(id===curId&&curPerm){ enterMeeting(id,curPerm); return; }
+
+  if(!needLogin){ enterMeeting(id,'host'); }
+  else{ _loginTargetId=id; showLockedPreview(m); }
+}
+
+function showLockedPreview(m){
+  curId=m.id; curPerm=null;
+  gId('emptyState').style.display='none';
+  gId('lockedState').style.display='flex';
+  gId('mtgView').style.display='none';
+  gId('lockedTitle').textContent=m.info.title;
+  const i=m.info;
+  const parts=[];
+  if(i.date) parts.push(`📅 ${i.date}`);
+  if(i.host) parts.push(`👤 ${i.host}`);
+  if(i.location) parts.push(`📍 ${i.location}`);
+  gId('lockedMeta').innerHTML=parts.map(p=>`<span style="background:var(--s2);padding:4px 9px;border-radius:var(--rs);border:1px solid var(--bd);font-size:12px;color:var(--tx2)">${p}</span>`).join('');
+  renderSidebar();
+}
+
+function openLoginScreen(){
+  const m=meetings[_loginTargetId||curId]; if(!m) return;
+  const p=m.pwds||{};
+  gId('loginTitle').textContent=`🔐 ${m.info.title}`;
+  gId('loginError').style.display='none';
+  if(gId('loginName')) gId('loginName').value='';
+  const i=m.info;
+  const parts=[];
+  if(i.date) parts.push(`📅 ${i.date}`);
+  if(i.host) parts.push(`👤 ${i.host}`);
+  gId('loginMeta').innerHTML=parts.map(p=>`<span>${p}</span>`).join('');
+  const lvls=[];
+  if(p.host) lvls.push({k:'host',l:'主持人',c:'tag-host'});
+  if(p.edit) lvls.push({k:'edit',l:'編輯者',c:'tag-edit'});
+  if(p.view) lvls.push({k:'view',l:'檢視者',c:'tag-view'});
+  gId('loginPwdFields').innerHTML=lvls.length===0
+    ?'<p style="font-size:12px;color:var(--tx3)">此會議未設密碼</p>'
+    :lvls.map(l=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
+        <span class="pwd-tag ${l.c}" style="flex-shrink:0">${l.l}</span>
+        <input type="password" id="lpw-${l.k}" class="login-input" placeholder="輸入${l.l}密碼" style="margin-bottom:0" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>`).join('');
+  gId('loginScreen').classList.add('open');
+}
+
+function doLogin(){
+  const m=meetings[_loginTargetId||curId]; if(!m) return;
+  const p=m.pwds||{};
+  const atts=Object.values(m.atts||{});
+  const name=(gId('loginName').value||'').trim();
+  // ① 姓名比對
+  if(name){
+    const f=atts.find(a=>a.name===name);
+    if(f){gId('loginScreen').classList.remove('open');enterMeeting(m.id,f.perm||'edit');toast(`✓ 歡迎，${f.name}（${{host:'主持人',edit:'編輯者',view:'檢視者'}[f.perm||'edit']}）`);return;}
+  }
+  // ② 密碼比對
+  for(const k of['host','edit','view']){
+    const el=gId('lpw-'+k); if(!el) continue;
+    const v=(el.value||'').trim();
+    if(v&&p[k]&&v===p[k]){gId('loginScreen').classList.remove('open');enterMeeting(m.id,k);return;}
+  }
+  // ③ 無限制
+  if(!p.host&&!p.edit&&!p.view&&!atts.length){gId('loginScreen').classList.remove('open');enterMeeting(m.id,'host');return;}
+  gId('loginError').style.display='block';
+}
+
+function cancelLogin(){
+  gId('loginScreen').classList.remove('open');
+  curId=null;curPerm=null;
+  gId('emptyState').style.display='flex';
+  gId('lockedState').style.display='none';
+  gId('mtgView').style.display='none';
+  renderSidebar();
+}
+
+function enterMeeting(id,perm){
+  curId=id;curPerm=perm;
+  gId('emptyState').style.display='none';
+  gId('lockedState').style.display='none';
+  gId('mtgView').style.display='block';
+  renderMeeting();applyPermUI();switchTab(null,'overview');renderSidebar();
+}
+
+/* ════════ MEETING MODAL ════════ */
+let _editId=null;
+function openNewMtgModal(){
+  _editId=null;
+  gId('mtgModalTitle').textContent='新增會議';
+  gId('mtgSaveBtn').textContent='建立會議';
+  ['nm-title','nm-date','nm-host','nm-loc','nm-proj','nm-dl','nm-ph','nm-pe','nm-pv'].forEach(id=>{const el=gId(id);if(el)el.value='';});
+  openModal('mtgModal');
+}
+function openEditMtgModal(){
+  const m=cur();if(!m)return;
+  _editId=m.id;
+  gId('mtgModalTitle').textContent='編輯會議資訊';
+  gId('mtgSaveBtn').textContent='儲存';
+  const i=m.info,p=m.pwds||{};
+  gId('nm-title').value=i.title||'';gId('nm-date').value=i.date||'';
+  gId('nm-host').value=i.host||'';gId('nm-loc').value=i.location||'';
+  gId('nm-proj').value=i.project||'';gId('nm-dl').value=i.deadline||'';
+  gId('nm-ph').value=p.host||'';gId('nm-pe').value=p.edit||'';gId('nm-pv').value=p.view||'';
+  openModal('mtgModal');
+}
+async function saveMtgModal(){
+  const title=(gId('nm-title').value||'').trim();if(!title){toast('請填寫會議名稱');return;}
+  gId('mtgSaveBtn').disabled=true;gId('mtgSaveBtn').textContent='儲存中⋯';
+  const info={title,date:gv('nm-date'),host:gv('nm-host'),location:gv('nm-loc'),project:gv('nm-proj'),deadline:gv('nm-dl')};
+  const pwds={host:gv('nm-ph'),edit:gv('nm-pe'),view:gv('nm-pv')};
+  if(_editId){
+    const m=meetings[_editId];if(!m)return;
+    m.info=info;m.pwds=pwds;
+    await pushMeeting(m);closeModal('mtgModal');renderMeeting();applyPermUI();toast('✓ 已更新');
+  } else {
+    const id='m_'+Date.now();
+    const m={id,info,pwds,summary:'',atts:{},decs:{},todos:{},logs:[]};
+    const res=await pushMeeting(m);
+    closeModal('mtgModal');
+    if(!res.error) enterMeeting(id,'host');
+    toast('✓ 會議已建立，所有人都能看到！');
+  }
+  gId('mtgSaveBtn').disabled=false;gId('mtgSaveBtn').textContent='儲存';
+}
+
+/* ════════ RENDER MEETING ════════ */
+function renderMeeting(){
+  const m=cur();if(!m)return;
+  const i=m.info;
+  gId('vTitle').textContent=i.title||'—';
+  gId('vDate').textContent=i.date||'—';
+  gId('vHost').textContent=i.host||'—';
+  gId('vLoc').textContent=i.location||'—';
+  gId('vProject').textContent=i.project||'—';
+  if(i.deadline){
+    const d=Math.ceil((new Date(i.deadline)-new Date())/86400000);
+    const al=gId('vDeadline');
+    if(d>=0&&d<=60){al.style.display='flex';gId('vDeadlineMsg').textContent=`專案截止日 ${i.deadline}，還剩 ${d} 天！`;}
+    else al.style.display='none';
+    gId('ovDays').textContent=d>=0?d+'天':'已截止';
+  } else gId('ovDays').textContent='—';
+  gId('sumBox').innerText=m.summary||'';
+  renderAtts();renderDecs();renderTodos();renderOvTodo();
+  if(canHost())renderPermEdit(m);
+}
+
+async function saveNow(){
+  const m=cur();if(!m)return;
+  m.summary=gId('sumBox').innerText.trim();
+  await pushMeeting(m);toast('✓ 已儲存並同步');
+}
+
+function applyPermUI(){
+  const lb={host:'主持人',edit:'編輯者',view:'檢視者'};
+  const bg={host:'#EEEDFE',edit:'#EAF3DE',view:'#EDEAE4'};
+  const cl={host:'#3C3489',edit:'#0D6B52',view:'#585450'};
+  const pp=gId('permPill');
+  pp.textContent=lb[curPerm]||'—';pp.style.background=bg[curPerm]||'#EDEAE4';pp.style.color=cl[curPerm]||'#585450';
+  const se=(id,v)=>{const el=gId(id);if(el)el.style.display=v?'':'none';};
+  const isEdit=canEdit(),isHost=canHost();
+  se('btnEdit',isHost);se('btnDel',isHost);se('btnSave',isEdit);
+  se('attActions',isEdit);se('btnClearLog',isEdit);
+  se('btnClearSum',isEdit);se('decForm',isEdit);
+  se('todoForm',isEdit);se('btnClearDone',isEdit);
+  se('tabAI',isEdit);
+  gId('sumBox').contentEditable=isEdit?'true':'false';
+  if(isHost)renderPermEdit(cur());
+  else gId('permEditArea').innerHTML='<p style="font-size:13px;color:var(--tx3)">需要主持人權限才能修改。</p>';
+}
+
+function renderPermEdit(m){
+  if(!m)return;
+  const p=m.pwds||{};
+  const attRows=Object.entries(m.atts||{}).map(([k,a])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:var(--rs);margin-bottom:5px;font-size:13px">
+      <span style="flex:1;font-weight:500">${a.name}</span>
+      <span style="font-size:11px;color:var(--tx3)">${a.dept||''}</span>
+      <select onchange="updAttPerm('${k}',this.value)" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--bd);border-radius:var(--rs)">
+        <option value="host" ${a.perm==='host'?'selected':''}>主持人</option>
+        <option value="edit" ${(!a.perm||a.perm==='edit')?'selected':''}>編輯者</option>
+        <option value="view" ${a.perm==='view'?'selected':''}>檢視者</option>
+      </select>
+      <button class="xbtn" onclick="delAttPerm('${k}')">✕</button>
+    </div>`).join('');
+  gId('permEditArea').innerHTML=`
+    <div style="margin-bottom:14px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:9px">密碼設定</div>
+      <div class="pwd-row"><label><span class="pwd-tag tag-host">主持人</span></label><input class="pwd-input" type="password" id="ep-host" value="${p.host||''}" placeholder="留空=不限制"><button class="btn btn-sm" onclick="togglePwd('ep-host')">顯示</button></div>
+      <div class="pwd-row"><label><span class="pwd-tag tag-edit">編輯者</span></label><input class="pwd-input" type="password" id="ep-edit" value="${p.edit||''}" placeholder="留空=不限制"><button class="btn btn-sm" onclick="togglePwd('ep-edit')">顯示</button></div>
+      <div class="pwd-row" style="margin-bottom:10px"><label><span class="pwd-tag tag-view">檢視者</span></label><input class="pwd-input" type="password" id="ep-view" value="${p.view||''}" placeholder="留空=不限制"><button class="btn btn-sm" onclick="togglePwd('ep-view')">顯示</button></div>
+      <button class="btn btn-primary" onclick="savePermPwds()">儲存密碼</button>
+    </div>
+    <div style="border-top:1px solid var(--bd);padding-top:12px">
+      <div style="font-size:13px;font-weight:500;margin-bottom:8px">人員名單（依姓名進入）</div>
+      ${Object.keys(m.atts||{}).length===0?'<p style="font-size:13px;color:var(--tx3);margin-bottom:8px">請前往「出席打卡」頁新增人員。</p>':attRows}
+    </div>`;
+}
+
+async function savePermPwds(){
+  const m=cur();if(!m)return;
+  m.pwds={host:(gId('ep-host')||{}).value||'',edit:(gId('ep-edit')||{}).value||'',view:(gId('ep-view')||{}).value||''};
+  await pushMeeting(m);toast('✓ 密碼已儲存並同步');
+}
+async function updAttPerm(k,perm){
+  const m=cur();if(!m||!m.atts[k])return;
+  m.atts[k].perm=perm;await pushMeeting(m);
+}
+async function delAttPerm(k){
+  const m=cur();if(!m)return;
+  const name=(m.atts[k]||{}).name||'?';
+  cfmDialog(`確定移除「${name}」？`,'移除',async()=>{delete m.atts[k];await pushMeeting(m);renderAtts();renderPermEdit(m);});
+}
+
+/* ════════ TABS ════════ */
+function switchTab(el,name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  if(el)el.classList.add('active');
+  else{const map={overview:0,checkin:1,summary:2,todo:3,ai:4,perm:5};const tabs=document.querySelectorAll('.tab');if(tabs[map[name]])tabs[map[name]].classList.add('active');}
+  const tc=gId('tc-'+name);if(tc)tc.classList.add('active');
+}
+
+/* ════════ ATTENDEES ════════ */
+const avC=['av-a','av-b','av-c','av-d','av-e','av-f'];
+const permLab={host:'主持人',edit:'編輯者',view:'檢視者'};
+const permCls={host:'ap-host',edit:'ap-edit',view:'ap-view'};
+
+function renderAtts(){
+  const m=cur();if(!m)return;
+  const atts=Object.entries(m.atts||{});
+  const pres=atts.filter(([,a])=>a.status==='present').length,total=atts.length;
+  gId('checkinCnt').textContent=`（${pres}/${total}）`;
+  gId('tbCheckin').textContent=`${pres}/${total}`;
+  gId('ovPresent').textContent=`${pres}/${total}`;
+  gId('noAtt').style.display=total===0?'block':'none';
+  const ed=canEdit();
+  gId('attGrid').innerHTML=atts.map(([k,a],idx)=>{
+    const cls=a.status==='present'?'present':(a.status==='late'?'late':'');
+    const icon=a.status==='present'?'✓':(a.status==='late'?'⚡':'○');
+    return `<div class="att ${cls} ${ed?'clickable':''}" ${ed?`onclick="toggleAtt('${k}')"`:''}">
+      <div class="av ${avC[idx%6]}">${(a.name||'?')[0]}</div>
+      <div class="att-info"><div class="att-name">${a.name}</div><div class="att-dept">${a.dept||''}</div></div>
+      <span class="att-perm ${permCls[a.perm||'edit']}">${permLab[a.perm||'edit']}</span>
+      <span style="font-size:12px;margin-left:2px">${icon}</span>
+      ${ed?`<button class="xbtn" onclick="event.stopPropagation();delAtt('${k}')">✕</button>`:''}
+    </div>`;
+  }).join('');
+  renderLog();
+}
+async function toggleAtt(k){
+  if(!canEdit())return;
+  const m=cur();if(!m||!m.atts[k])return;
+  const a=m.atts[k];
+  const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  const c={'':{n:'present',l:'簽到'},'present':{n:'late',l:'遲到'},'late':{n:'absent',l:'請假'},'absent':{n:'',l:'取消'}}[a.status||''];
+  a.status=c.n;
+  if(c.n){if(!m.logs)m.logs=[];m.logs.push({name:a.name,action:c.l,time:t});}
+  await pushMeeting(m);renderAtts();
+}
+function renderLog(){
+  const m=cur();if(!m)return;
+  const logs=(m.logs||[]).slice().reverse().slice(0,12);
+  const el=gId('logList');
+  if(!logs.length){el.textContent='尚無記錄';return;}
+  el.innerHTML=logs.map(l=>`<div style="display:flex;gap:12px;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px"><span style="color:var(--tx3)">${l.time}</span><span style="font-weight:500">${l.name}</span><span style="color:var(--tx3)">${l.action}</span></div>`).join('');
+}
+async function addAttendee(){
+  const m=cur();if(!m)return;
+  const name=(gId('att-name').value||'').trim();if(!name){toast('請填寫姓名');return;}
+  if(!m.atts)m.atts={};
+  m.atts['att_'+Date.now()]={name,dept:gv('att-dept'),email:gv('att-email'),perm:gv('att-perm'),status:''};
+  await pushMeeting(m);
+  closeModal('attModal');
+  ['att-name','att-dept','att-email'].forEach(id=>{const el=gId(id);if(el)el.value='';});
+  renderAtts();if(canHost())renderPermEdit(m);toast('✓ 已新增並同步');
+}
+async function delAtt(k){
+  const m=cur();if(!m)return;
+  cfmDialog(`確定移除「${(m.atts[k]||{}).name}」？`,'移除',async()=>{delete m.atts[k];await pushMeeting(m);renderAtts();});
+}
+async function checkAll(){
+  const m=cur();if(!m||!canEdit())return;
+  const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
+  if(!m.logs)m.logs=[];
+  Object.entries(m.atts||{}).forEach(([k,a])=>{if(a.status!=='present'){m.logs.push({name:a.name,action:'簽到',time:t});a.status='present';}});
+  await pushMeeting(m);renderAtts();
+}
+async function clearLog(){
+  const m=cur();if(!m)return;
+  cfmDialog('確定清除打卡記錄？','清除',async()=>{m.logs=[];await pushMeeting(m);renderLog();});
+}
+
+/* ════════ DECISIONS ════════ */
+function renderDecs(){
+  const m=cur();if(!m)return;
+  const decs=Object.entries(m.decs||{});
+  const cm={product:'產品',tech:'技術',process:'流程',other:'其他'};
+  gId('noDec').style.display=decs.length===0?'block':'none';
+  gId('ovDec').textContent=decs.length;
+  const ed=canEdit();
+  gId('decList').innerHTML=decs.map(([k,d])=>`<div class="item"><div class="dot dot-p"></div><div class="ibody"><div class="itext">${d.text}</div><div class="imeta"><span class="pill">${cm[d.cat]||d.cat}</span>${d.owner?`<span class="pill">${d.owner}</span>`:''}</div></div>${ed?`<button class="xbtn" onclick="delDec('${k}')">✕</button>`:''}</div>`).join('');
+}
+async function addDec(){
+  const m=cur();if(!m||!canEdit())return;
+  const t=(gv('decTxt')||'').trim();if(!t)return;
+  if(!m.decs)m.decs={};
+  m.decs['dec_'+Date.now()]={text:t,owner:gv('decOwner'),cat:gv('decCat')};
+  gId('decTxt').value='';gId('decOwner').value='';
+  await pushMeeting(m);renderDecs();
+}
+async function delDec(k){const m=cur();if(!m)return;delete m.decs[k];await pushMeeting(m);renderDecs();}
+async function clearSum(){const m=cur();if(!m)return;cfmDialog('確定清除摘要？','清除',async()=>{m.summary='';gId('sumBox').innerText='';await pushMeeting(m);});}
+
+/* ════════ TODOS ════════ */
+function renderTodos(){
+  const m=cur();if(!m)return;
+  let todos=Object.entries(m.todos||{});
+  const allPend=todos.filter(([,t])=>!t.done).length;
+  if(todoFilter==='pending')todos=todos.filter(([,t])=>!t.done);
+  else if(todoFilter==='done')todos=todos.filter(([,t])=>t.done);
+  else if(todoFilter==='urgent')todos=todos.filter(([,t])=>t.urgent&&!t.done);
+  gId('ovTodo').textContent=allPend;gId('tbTodo').textContent=allPend;
+  gId('todoTotal').textContent=Object.keys(m.todos||{}).length;gId('todoPend').textContent=allPend;
+  gId('noTodo').style.display=todos.length===0?'block':'none';
+  const ed=canEdit();
+  gId('todoList').innerHTML=todos.map(([k,t])=>`<div class="item ${t.done?'done':''}">
+    <div class="chk ${t.done?'on':''} ${!ed?'disabled':''}" ${ed?`onclick="togTodo('${k}')"`:''}>${t.done?'✓':''}</div>
+    <div class="ibody"><div class="itext ${t.done?'struck':''}">${t.text}</div>
+    <div class="imeta">${t.owner?`<span class="pill">@${t.owner}</span>`:''} ${t.due?`<span class="pill">截止 ${t.due}</span>`:''} ${t.urgent&&!t.done?'<span class="pill pill-red">緊急</span>':''}</div></div>
+    ${ed?`<button class="xbtn" onclick="delTodo('${k}')">✕</button>`:''}</div>`).join('');
+  renderOvTodo();
+}
+function renderOvTodo(){
+  const m=cur();if(!m)return;
+  const items=Object.values(m.todos||{}).filter(t=>!t.done).slice(0,4);
+  const el=gId('ovTodoList');
+  if(!items.length){el.innerHTML='<p style="font-size:13px;color:var(--tx3)">尚無待辦</p>';return;}
+  el.innerHTML=items.map(t=>`<div class="item"><div class="dot dot-t"></div><div class="ibody"><div class="itext">${t.text}</div><div class="imeta">${t.owner?`<span class="pill">@${t.owner}</span>`:''} ${t.due?`<span class="pill">截止 ${t.due}</span>`:''} ${t.urgent?'<span class="pill pill-red">緊急</span>':''}</div></div></div>`).join('');
+}
+async function addTodo(){
+  const m=cur();if(!m||!canEdit())return;
+  const t=(gv('todoTxt')||'').trim();if(!t)return;
+  if(!m.todos)m.todos={};
+  m.todos['todo_'+Date.now()]={text:t,owner:gv('todoOwner'),due:gv('todoDue'),urgent:gv('todoUrgent')==='1',done:false};
+  gId('todoTxt').value='';gId('todoOwner').value='';gId('todoDue').value='';
+  await pushMeeting(m);renderTodos();
+}
+async function togTodo(k){const m=cur();if(!m)return;m.todos[k].done=!m.todos[k].done;await pushMeeting(m);renderTodos();}
+async function delTodo(k){const m=cur();if(!m)return;delete m.todos[k];await pushMeeting(m);renderTodos();}
+async function clearDone(){const m=cur();if(!m)return;cfmDialog('確定清除已完成？','清除',async()=>{Object.keys(m.todos||{}).forEach(k=>{if(m.todos[k].done)delete m.todos[k];});await pushMeeting(m);renderTodos();});}
+function ftTodo(el,f){todoFilter=f;document.querySelectorAll('.tag').forEach(t=>t.classList.remove('on'));el.classList.add('on');renderTodos();}
+
+/* ════════ DELETE MEETING ════════ */
+async function delMeeting(){
+  const m=cur();if(!m)return;
+  cfmDialog(`確定刪除「${m.info.title}」？所有人都將看不到，且無法復原。`,'刪除',async()=>{
+    await removeMeeting(m.id);
+    curId=null;curPerm=null;
+    gId('emptyState').style.display='flex';
+    gId('mtgView').style.display='none';
+    gId('lockedState').style.display='none';
+    gId('emptyTitle').textContent='尚無會議記錄';
+    gId('emptyDesc').textContent='點擊左側「＋ 新增會議」建立第一場會議';
+    toast('✓ 會議已刪除');
+  });
+}
+
+/* ════════ AI ════════ */
+async function fillAI(){
+  const m=cur();if(!m)return;
+  const raw=(gId('aiInput').value||'').trim();if(!raw)return;
+  let parsed;
+  try{const cl=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();parsed=JSON.parse(cl.match(/\{[\s\S]*\}/)?.[0]||cl);}
+  catch(e){toast('❌ JSON 格式錯誤');return;}
+  if(parsed.summary){m.summary=parsed.summary;gId('sumBox').innerText=parsed.summary;}
+  if(!m.decs)m.decs={};if(!m.todos)m.todos={};
+  let dc=0,tc=0;
+  (parsed.decisions||[]).forEach(d=>{if(d?.text){m.decs['dec_'+Date.now()+'_'+dc]={text:d.text,owner:d.owner||'',cat:d.cat||'other'};dc++;}});
+  (parsed.todos||[]).forEach(t=>{if(t?.text){m.todos['todo_'+Date.now()+'_'+tc]={text:t.text,owner:t.owner||'',due:t.due||'',urgent:!!t.urgent,done:false};tc++;}});
+  await pushMeeting(m);renderMeeting();
+  gId('fillRes').style.display='block';
+  gId('fillRes').innerHTML=`<div class="alert alert-ok">✦ 填入並同步完成！決策 ${dc} 項 · 待辦 ${tc} 項</div>`;
+  toast('✓ 已填入並同步到雲端！');setTimeout(()=>switchTab(null,'summary'),1200);
+}
+
+/* ════════ EXPORT TXT ════════ */
+function exportTxt(){
+  const m=cur();if(!m)return;
+  const i=m.info;
+  const lines=[`【會議記錄】${i.title}`,`日期：${i.date||'—'} | 主持：${i.host||'—'} | 地點：${i.location||'—'}`,'','═══ 出席 ═══',...Object.values(m.atts||{}).map(a=>`${a.status==='present'?'✓':'○'} ${a.name}（${a.dept||'—'}）`),'','═══ 摘要 ═══',m.summary||'—','','═══ 決策 ═══',...Object.values(m.decs||{}).map((d,n)=>`${n+1}. ${d.text}（${d.owner||'—'}）`),'','═══ 待辦 ═══',...Object.values(m.todos||{}).map((t,n)=>`${n+1}. [${t.done?'✓':'○'}]${t.urgent?'【緊急】':''} ${t.text} @${t.owner||'—'} 截止${t.due||'—'}`)];
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));a.download='會議記錄_'+(i.date||'draft')+'.txt';a.click();
+}
+
+/* ════════ MODAL / CONFIRM ════════ */
+function openModal(id){const el=gId(id);if(el)el.classList.add('open');}
+function closeModal(id){const el=gId(id);if(el)el.classList.remove('open');}
+function cfmDialog(msg,label,cb){gId('confirmMsg').textContent=msg;gId('confirmOkBtn').textContent=label||'確定';window._cfRes=cb;window._cfRej=null;openModal('confirmModal');}
+function togglePwd(id){const el=gId(id);if(el)el.type=el.type==='password'?'text':'password';}
+function toast(msg){const el=gId('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
+
+gId('sumBox').addEventListener('blur',async()=>{const m=cur();if(m&&canEdit()&&gId('sumBox').innerText.trim()!==m.summary){m.summary=gId('sumBox').innerText.trim();await pushMeeting(m);}});
+
+init();
+</script>
+</body>
+</html>
