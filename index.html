@@ -3,1042 +3,1045 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>多會議記錄系統</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<title>安橋股份有限公司 員工資訊平台</title>
 <style>
-:root{
-  --bg:#F4F2EE;--s:#FFF;--s2:#EDEAE4;
-  --bd:#DDD9D1;--bd2:#C6C1B8;
-  --tx:#1A1917;--tx2:#585450;--tx3:#8A8680;
-  --bar:#22211F;
-  --p:#4A42B0;--pl:#EEEDFE;--pm:#7F77DD;
-  --t:#0D6B52;--tl:#E0F4EC;--tm:#1B9B71;
-  --am:#7D4B09;--al:#FAF0DA;
-  --rd:#9E2B2B;--rl:#FCEBEB;
-  --gn:#255009;--gl:#E8F2DC;
-  --r:10px;--rs:6px;
-}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.6}
-.app{display:flex;min-height:100vh}
-
-.sb{width:230px;flex-shrink:0;background:var(--bar);display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0;z-index:300}
-.sb-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sb-logo h1{font-family:'Noto Serif TC',serif;font-size:14px;font-weight:600;color:#F2F0EC;line-height:1.4}
-.sb-logo p{font-size:10px;color:rgba(255,255,255,.3);margin-top:2px}
-.sb-sync{display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:11px;color:rgba(255,255,255,.4);border-bottom:1px solid rgba(255,255,255,.06)}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:#8A8680;flex-shrink:0;transition:.3s}
-.sync-dot.ok{background:#1B9B71}
-.sync-dot.err{background:#9E2B2B}
-.sync-dot.busy{background:#EF9F27;animation:pulse .8s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.sb-sec{padding:9px 14px 3px;font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.06em}
-.sb-list{flex:1;overflow-y:auto;padding-bottom:8px}
-.sb-item{display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;transition:.15s;border-left:3px solid transparent}
-.sb-item:hover{background:rgba(255,255,255,.05)}
-.sb-item.active{background:rgba(255,255,255,.09);border-left-color:var(--pm)}
-.sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.sb-info{flex:1;min-width:0}
-.sb-name{font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sb-date{font-size:10px;color:rgba(255,255,255,.35);margin-top:1px}
-.sb-badge{font-size:9px;padding:1px 5px;border-radius:999px}
-.sb-actions{padding:8px 10px;border-top:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;gap:5px}
-.sb-btn{width:100%;padding:8px;font-size:11px;border-radius:var(--rs);cursor:pointer;font-family:inherit;border:none;text-align:center;transition:.15s}
-.sb-btn-add{background:rgba(255,255,255,.1);color:rgba(255,255,255,.75)}
-.sb-btn-add:hover{background:rgba(255,255,255,.18)}
-.sb-btn-export{background:var(--tm);color:#fff}
-.sb-btn-export:hover{background:#0F6E52}
-.sb-bot{padding:8px 14px 12px;font-size:10px;color:rgba(255,255,255,.2);line-height:1.6}
-
-.main{margin-left:230px;flex:1;padding:22px 26px;max-width:calc(100vw - 230px)}
-
-.center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:65vh;text-align:center;gap:10px}
-.center-icon{font-size:44px;opacity:.3}
-.center-title{font-size:17px;font-weight:500;color:var(--tx2)}
-.center-desc{font-size:13px;color:var(--tx3);max-width:300px;line-height:1.7}
-
-/* Meeting header */
-.mtg-hdr{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:16px 20px;margin-bottom:14px}
-.mtg-hdr-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.mtg-title{font-size:17px;font-weight:500;margin-bottom:5px;display:flex;align-items:center;gap:8px}
-.mtg-meta{display:flex;gap:12px;flex-wrap:wrap}
-.mtg-meta-item{font-size:12px;color:var(--tx3);display:flex;align-items:center;gap:4px}
-.mtg-meta-item strong{color:var(--tx2)}
-.mtg-acts{display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0}
-.perm-pill{font-size:11px;padding:2px 9px;border-radius:999px;font-weight:500}
-.pp-host{background:#EEEDFE;color:#3C3489}
-.pp-edit{background:#E0F4EC;color:#0D6B52}
-.pp-view{background:#EDEAE4;color:#585450}
-
-.tabs{display:flex;gap:2px;margin-bottom:14px;background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:4px}
-.tab{flex:1;padding:7px 4px;font-size:13px;border:none;background:none;color:var(--tx3);cursor:pointer;border-radius:var(--rs);transition:.15s;font-family:inherit;text-align:center}
-.tab:hover{background:var(--s2);color:var(--tx2)}
-.tab.active{background:var(--bar);color:#F2F0EC;font-weight:500}
-.tab-badge{font-size:10px;background:var(--pm);color:#fff;padding:1px 5px;border-radius:999px;margin-left:3px}
-.tc{display:none}.tc.active{display:block}
-
-.btn{padding:7px 13px;font-size:13px;border-radius:var(--rs);border:1px solid var(--bd2);background:var(--s);color:var(--tx2);cursor:pointer;font-family:inherit;transition:.15s;white-space:nowrap}
-.btn:hover{background:var(--s2)}.btn:active{transform:scale(.98)}
-.btn-primary{background:var(--bar);color:#F2F0EC;border-color:var(--bar)}.btn-primary:hover{background:#363430}
-.btn-ai{background:var(--pl);color:var(--p);border-color:#AFA9EC;font-weight:500}.btn-ai:hover{background:#E2E0FA}
-.btn-danger{background:var(--rl);color:var(--rd);border-color:#F09595}
-.btn-sm{padding:4px 10px;font-size:11px}
-
-.card{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:17px 19px;margin-bottom:12px}
-.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;flex-wrap:wrap;gap:6px}
-.card-hdr h3{font-size:14px;font-weight:500}
-
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:13px}
-.stat{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:13px 15px}
-.stat-n{font-size:21px;font-weight:500;font-family:'Noto Serif TC',serif}
-.stat-l{font-size:11px;color:var(--tx3);margin-top:3px}
-
-.alert{display:flex;align-items:flex-start;gap:9px;padding:10px 13px;border-radius:var(--rs);margin-bottom:11px;font-size:13px;border:1px solid;line-height:1.6}
-.alert-warn{background:var(--al);color:var(--am);border-color:#FAC775}
-.alert-ok{background:var(--gl);color:var(--gn);border-color:#C0DD97}
-.alert-info{background:var(--pl);color:var(--p);border-color:#AFA9EC}
-
-.sum-box{border-left:3px solid var(--pm);padding:12px 14px;background:var(--pl);border-radius:0 var(--rs) var(--rs) 0;font-size:13px;line-height:1.85;color:var(--tx);min-height:70px}
-.sum-box[contenteditable]{outline:none;cursor:text}
-.sum-box:empty::before{content:attr(data-ph);color:var(--tx3)}
-
-.perm-matrix{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
-.perm-matrix th{padding:8px 10px;text-align:left;font-size:11px;font-weight:500;color:var(--tx3);border-bottom:1px solid var(--bd);background:var(--s2)}
-.perm-matrix td{padding:8px 10px;border-bottom:1px solid var(--bd);vertical-align:middle}
-.perm-matrix tr:last-child td{border-bottom:none}
-.perm-check{color:var(--tm);font-size:15px}
-.perm-x{color:var(--tx3)}
-
-.item-list{display:flex;flex-direction:column;gap:5px}
-.item{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--bg);transition:.15s}
-.item:hover{border-color:var(--bd2)}
-.item.done{opacity:.5}
-.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.dot-p{background:var(--pm)}.dot-t{background:var(--tm)}
-.ibody{flex:1;min-width:0}
-.itext{font-size:13px;line-height:1.45;word-break:break-all}
-.itext.struck{text-decoration:line-through;color:var(--tx3)}
-.imeta{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px}
-.pill{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--bd);background:var(--s);color:var(--tx3)}
-.pill-red{background:var(--rl);color:var(--rd);border-color:#F09595}
-.chk{width:17px;height:17px;border-radius:4px;border:1.5px solid var(--bd2);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;background:var(--s);font-size:10px;color:transparent;transition:.15s}
-.chk:hover{border-color:var(--tm)}.chk.on{background:var(--tm);border-color:var(--tm);color:#fff}
-.xbtn{font-size:13px;color:var(--tx3);cursor:pointer;padding:2px 4px;border-radius:4px;background:none;border:none;transition:.15s;line-height:1;flex-shrink:0}
-.xbtn:hover{background:var(--rl);color:var(--rd)}
-
-.tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
-.tag{font-size:11px;padding:3px 10px;border-radius:999px;border:1px solid var(--bd);cursor:pointer;background:var(--s);color:var(--tx3);transition:.15s}
-.tag.on{background:var(--pl);color:var(--p);border-color:#AFA9EC}
-
-.add-form{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;padding:10px;background:var(--s2);border-radius:var(--rs);border:1px dashed var(--bd2)}
-.add-form input,.add-form select{padding:6px 9px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:inherit}
-.add-form input:focus,.add-form select:focus{outline:none;border-color:var(--pm)}
-.grow{flex:1;min-width:130px}
-
-.att-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px}
-.att{display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--bg);transition:.15s}
-.att.clickable{cursor:pointer}.att.clickable:hover{border-color:var(--bd2)}
-.att.present{background:var(--gl);border-color:#C0DD97}
-.att.late{background:var(--al);border-color:#FAC775}
-.av{width:31px;height:31px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
-.av-a{background:#CECBF6;color:#3C3489}.av-b{background:#9FE1CB;color:#085041}
-.av-c{background:#F5C4B3;color:#712B13}.av-d{background:#B5D4F4;color:#0C447C}
-.av-e{background:#F4C0D1;color:#72243E}.av-f{background:#C0DD97;color:#27500A}
-.att-info{flex:1;min-width:0}
-.att-name{font-size:13px;font-weight:500}
-.att-dept{font-size:10px;color:var(--tx3)}
-.att-perm{font-size:10px;padding:1px 6px;border-radius:999px;flex-shrink:0}
-.ap-host{background:#EEEDFE;color:#4A42B0}
-.ap-edit{background:#E0F4EC;color:#0D6B52}
-.ap-view{background:#EDEAE4;color:#585450}
-
-.upload-zone{border:1.5px dashed var(--bd2);border-radius:var(--rs);padding:18px;text-align:center;cursor:pointer;background:var(--s2);transition:.2s;margin-top:8px}
-.upload-zone:hover{border-color:var(--pm);background:var(--pl)}
-.paste-area{width:100%;min-height:110px;padding:10px 12px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:monospace;resize:vertical;line-height:1.6}
-.paste-area:focus{outline:none;border-color:var(--pm)}
-
-.pwd-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
-.pwd-row label{font-size:12px;width:70px;flex-shrink:0}
-.pwd-input{flex:1;min-width:150px;padding:7px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:inherit}
-.pwd-tag{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500}
-.tag-host{background:#EEEDFE;color:#3C3489}
-.tag-edit{background:#E0F4EC;color:#0D6B52}
-.tag-view{background:#EDEAE4;color:#585450}
-
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
-.modal-bg.open{display:flex}
-.modal{background:var(--s);border-radius:var(--r);padding:22px 24px;max-width:460px;width:92%;position:relative;max-height:90vh;overflow-y:auto}
-.modal h3{font-size:15px;font-weight:500;margin-bottom:14px}
-.modal-close{position:absolute;top:14px;right:14px;font-size:17px;cursor:pointer;color:var(--tx3);background:none;border:none;line-height:1}
-.fg{margin-bottom:10px}
-.fg label{font-size:12px;color:var(--tx3);display:block;margin-bottom:4px}
-.fg input,.fg select,.fg textarea{width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:var(--s);color:var(--tx);font-family:inherit}
-.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--pm)}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
-
-/* Login screen */
-.login-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:400;align-items:center;justify-content:center}
-.login-screen.open{display:flex}
-.login-card{background:var(--s);border:1px solid var(--bd);border-radius:var(--r);padding:26px 28px;max-width:400px;width:92%}
-.login-card h3{font-size:15px;font-weight:500;margin-bottom:4px}
-.login-card p{font-size:12px;color:var(--tx3);margin-bottom:16px;line-height:1.6}
-.login-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.login-meta span{font-size:12px;color:var(--tx2);background:var(--s2);padding:3px 9px;border-radius:var(--rs);border:1px solid var(--bd)}
-.login-sec{padding:11px 13px;border-radius:var(--rs);margin-bottom:10px;border:1px solid}
-.ls-name{background:var(--gl);border-color:#C0DD97}
-.ls-pwd{background:var(--pl);border-color:#AFA9EC}
-.ls-title{font-size:12px;font-weight:500;margin-bottom:7px}
-.ls-name .ls-title{color:var(--gn)}
-.ls-pwd .ls-title{color:var(--p)}
-.login-input{width:100%;padding:7px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs);background:#fff;font-family:inherit}
-.login-input:focus{outline:none;border-color:var(--pm)}
-.login-error{font-size:12px;color:var(--rd);margin:6px 0;display:none}
-
-.toast{position:fixed;bottom:18px;right:18px;background:#22211F;color:#F2F0EC;padding:9px 15px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;max-width:300px}
-.toast.show{opacity:1}
-
-@media(max-width:800px){
-  .sb{width:200px}.main{margin-left:200px;padding:14px;max-width:calc(100vw - 200px)}
-  .stats{grid-template-columns:repeat(2,1fr)}
+:root{--pk:#E8315A;--pk-light:#FBEAF0;--pk-mid:#F4C0D1;--pk-dark:#72243E;--pk-border:#ED93B1;--bg:#fff;--bg2:#f7f7f5;--bg3:#f0efe9;--text:#1a1a1a;--text2:#666;--text3:#999;--border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.2);--r:8px;--rl:12px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;min-height:100vh}
+.page{max-width:920px;margin:0 auto;padding:16px}
+.hdr{background:var(--pk);color:white;padding:1rem 1.4rem;display:flex;align-items:center;gap:14px;border-radius:var(--rl) var(--rl) 0 0}
+.logo{width:42px;height:42px;background:white;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--pk);flex-shrink:0}
+.hdr-t{font-size:16px;font-weight:600}.hdr-s{font-size:11px;opacity:.82;margin-top:2px}
+.tabs{display:flex;gap:2px;background:var(--pk-light);border-bottom:1px solid var(--pk-mid);padding:8px 12px;overflow-x:auto}
+.tb{padding:6px 11px;border-radius:var(--r);border:none;background:transparent;font-size:12px;color:var(--pk-dark);cursor:pointer;white-space:nowrap;font-family:inherit}
+.tb:hover{background:var(--pk-mid)}.tb.on{background:var(--pk);color:white;font-weight:500}
+.tb.flash{animation:tf .6s ease}@keyframes tf{0%{box-shadow:0 0 0 0 rgba(232,49,90,.7)}70%{box-shadow:0 0 0 7px rgba(232,49,90,0)}100%{}}
+/* 桌機版 */
+.main{display:flex;height:580px;background:var(--bg);border-radius:0 0 var(--rl) var(--rl);border:1px solid var(--border);border-top:none;overflow:hidden}
+.ip{flex:1;padding:1.1rem;overflow-y:auto;border-right:1px solid var(--border);min-height:0}
+.cp{width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;min-height:0;position:relative}
+/* 手機版：對話區固定高度，內容自行滾動 */
+@media(max-width:700px){
+  .page{padding:8px}
+  .main{flex-direction:column;height:auto;border-radius:0 0 var(--rl) var(--rl)}
+  .ip{border-right:none;border-bottom:1px solid var(--border);height:320px;min-height:0;overflow-y:auto;flex:none}
+  .cp{width:100%;height:420px;min-height:420px;flex-shrink:0;border-top:none;position:relative}
 }
-@media print{
-  .sb,.mtg-acts,.add-form,.upload-zone,.tabs,.xbtn,.chk,.tags,.modal-bg,.toast,.login-screen{display:none!important}
-  .main{margin-left:0;padding:0}.card{break-inside:avoid}body{background:#fff}
-}
+.sec{display:none}.sec.on{display:block}
+.stitle{font-size:13px;font-weight:600;color:var(--pk);margin-bottom:.8rem;padding-bottom:6px;border-bottom:2px solid var(--pk-mid)}
+.ssub{font-size:11px;font-weight:600;color:var(--text2);margin:.9rem 0 .5rem;text-transform:uppercase;letter-spacing:.04em}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.7rem .9rem}
+.card .lbl{font-size:11px;color:var(--text2);margin-bottom:3px}.card .val{font-size:13px;font-weight:600;color:var(--text)}
+.ib{background:var(--pk-light);border:1px solid var(--pk-mid);border-radius:var(--r);padding:.65rem .9rem;margin-bottom:9px;font-size:12px;color:var(--pk-dark);line-height:1.6}
+.ib.bl{background:#EBF4FF;border-color:#B3D4FF;color:#1a4a7a}
+.ib.gr{background:#EAFAF1;border-color:#A9DFBF;color:#1a5c35}
+.ib.yw{background:#FFFBEA;border-color:#F9E4A0;color:#7a5c00}
+.tw{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:.9rem}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--pk-light)}
+th{padding:7px 10px;text-align:left;font-weight:600;color:var(--pk-dark);font-size:11px}
+td{padding:7px 10px;color:var(--text);border-top:1px solid var(--border);vertical-align:top}
+tr:hover td{background:var(--pk-light)}
+.ai{border:1px solid var(--border);border-radius:var(--r);margin-bottom:6px;overflow:hidden}
+.ah{padding:8px 12px;background:var(--bg);cursor:pointer;font-size:12px;font-weight:500;color:var(--text);display:flex;justify-content:space-between;align-items:center}
+.ah:hover{background:var(--pk-light)}
+.ab{display:none;padding:8px 12px;font-size:11px;color:var(--text2);line-height:1.7;border-top:1px solid var(--border)}
+.ab.open{display:block}.cv{font-size:9px;transition:transform .2s}.cv.open{transform:rotate(180deg)}
+.tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:20px;margin-right:4px}
+.tr{background:var(--pk-light);color:var(--pk-dark)}.tb2{background:#E6F1FB;color:#0C447C}.tg{background:#EAF3DE;color:#27500A}
+.ow{display:flex;flex-direction:column;align-items:center}
+.oc{width:1px;height:16px;background:var(--pk-mid);margin:0 auto}
+.olv{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.on2{background:var(--bg);border:1px solid var(--pk-border);border-radius:var(--r);padding:5px 10px;text-align:center;min-width:78px}
+.on2.top{background:var(--pk);border-color:var(--pk)}.on2.top .on{color:white}.on2.top .or{color:rgba(255,255,255,.8)}
+.on2.mid{background:var(--pk-light)}.on{font-size:11px;font-weight:600;color:var(--text)}.or{font-size:10px;color:var(--text2);margin-top:1px}
+.sr{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px}
+.sn{width:22px;height:22px;border-radius:50%;background:var(--pk);color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0;margin-top:1px}
+.st{font-size:12px;font-weight:600;color:var(--text)}.sd{font-size:11px;color:var(--text2);margin-top:2px;line-height:1.5}
+/* 公告欄 */
+.na{display:flex;gap:8px;margin-bottom:1rem}
+.na input{flex:1;border:1px solid var(--border2);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:inherit;outline:none;background:var(--bg2)}
+.na input:focus{border-color:var(--pk)}
+.nab{padding:7px 14px;border-radius:var(--r);border:none;background:var(--pk);color:white;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.ni{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.nd{width:8px;height:8px;border-radius:50%;background:var(--pk);flex-shrink:0;margin-top:4px}
+.nc{flex:1}.nt{font-size:13px;color:var(--text);line-height:1.5}.nm{font-size:11px;color:var(--text3);margin-top:3px}
+.ndel{font-size:11px;color:var(--text3);cursor:pointer;padding:2px 6px;border-radius:4px;margin-left:6px}
+.ndel:hover{background:var(--pk-light);color:var(--pk)}
+.npin{font-size:10px;background:var(--pk-light);color:var(--pk-dark);padding:1px 6px;border-radius:20px;margin-left:6px}
+/* 申訴 */
+.cg2{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:1rem}
+.cc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:1rem}
+.ci2{font-size:20px;margin-bottom:6px}.ct{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.cin{font-size:12px;color:var(--text2);line-height:1.6}
+.cl{display:inline-block;margin-top:6px;font-size:11px;color:var(--pk);text-decoration:none;word-break:break-all}
+.fg{margin-bottom:10px}.fl{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;display:block}
+.fi{width:100%;border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;background:var(--bg2)}
+.fi:focus{border-color:var(--pk)}
+.fs{width:100%;border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;background:var(--bg2)}
+.fs:focus{border-color:var(--pk)}
+.ft{width:100%;border:1px solid var(--border2);border-radius:var(--r);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;background:var(--bg2);resize:vertical;min-height:80px}
+.ft:focus{border-color:var(--pk)}
+.fb{width:100%;padding:10px;background:var(--pk);color:white;border:none;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:4px}
+.fb:hover{opacity:.9}.fn{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5}
+.sok{display:none;text-align:center;padding:1.5rem;background:#EAFAF1;border:1px solid #A9DFBF;border-radius:var(--r);color:#1a5c35;font-size:13px}
+/* Chat */
+.ch{background:var(--pk);padding:.65rem .9rem}.cht{font-size:12px;font-weight:600;color:white}
+.chs{font-size:10px;color:rgba(255,255,255,.8);display:flex;align-items:center;gap:4px;margin-top:2px}
+.dg{width:5px;height:5px;border-radius:50%;background:#9FE1CB}
+.cm{padding:.8rem;overflow-y:auto;flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:10px;background:var(--bg2);scroll-behavior:smooth}
+.qa{padding:.5rem .8rem;border-top:1px solid var(--pk-mid);background:var(--pk-light);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.ir{display:flex;gap:7px;padding:.65rem .8rem;background:var(--bg);border-top:1px solid var(--border);align-items:flex-end;flex-shrink:0}
+.scroll-btn{position:absolute;bottom:100px;right:10px;width:30px;height:30px;border-radius:50%;background:var(--pk);color:white;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(232,49,90,.4);z-index:20;line-height:1}
+.scroll-btn.show{display:flex}
+.msg{display:flex;gap:7px;align-items:flex-end;flex-shrink:0;width:100%}.msg.user{flex-direction:row-reverse}
+.bub{max-width:85%;padding:.65rem .9rem;border-radius:12px;font-size:12px;line-height:1.75;word-break:break-word;white-space:pre-wrap;flex-shrink:1}
+.msg.ai .bub{background:var(--bg);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px}
+.msg.user .bub{background:var(--pk);color:white;border-bottom-right-radius:3px}
+.mav{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;flex-shrink:0}
+.mav.a{background:var(--pk-light);color:var(--pk-dark)}.mav.u{background:var(--pk-mid);color:var(--pk-dark)}
+.ml{font-size:10px;color:var(--text3);margin-bottom:2px}
+.nh{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;border-radius:20px;background:var(--pk-light);border:1px solid var(--pk-border);font-size:11px;color:var(--pk-dark);cursor:pointer;font-family:inherit}
+.nh:hover{background:var(--pk-mid)}
+.tr2{display:flex;gap:7px;align-items:flex-end}
+.dots{display:flex;gap:3px;align-items:center;padding:.45rem .7rem;background:var(--bg);border:1px solid var(--border);border-radius:12px;border-bottom-left-radius:3px}
+.dots span{width:5px;height:5px;border-radius:50%;background:var(--pk-border);animation:b .9s infinite}
+.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.qc{padding:4px 9px;border-radius:20px;border:1px solid var(--pk-border);background:var(--bg);font-size:11px;color:var(--pk-dark);cursor:pointer;white-space:nowrap;font-family:inherit}
+.qc:hover{background:var(--pk-mid)}
+#ci{flex:1;border:1px solid var(--border2);border-radius:var(--r);padding:6px 10px;font-size:12px;resize:none;height:32px;max-height:80px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none}
+#ci:focus{border-color:var(--pk)}
+#sb{width:32px;height:32px;border-radius:var(--r);border:none;background:var(--pk);color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#sb:hover{opacity:.88}#sb:disabled{opacity:.4}
+.footer{text-align:center;font-size:11px;color:var(--text3);margin-top:10px}
+
+/* 行事曆 */
+.cal-day-hdr{background:var(--pk-light);padding:5px 0;text-align:center;font-size:11px;font-weight:600;color:var(--pk-dark);border-right:1px solid var(--border)}
+.cal-cell{min-height:60px;padding:3px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:top;cursor:pointer}
+.cal-cell:hover{background:var(--pk-light)}
+.cal-cell.other-m .cal-dn{color:var(--text3)}
+.cal-cell.today-c{background:var(--pk-light)}
+.cal-dn{font-size:11px;font-weight:600;color:var(--text);width:20px;height:20px;display:flex;align-items:center;justify-content:center}
+.cal-cell.today-c .cal-dn{background:var(--pk);color:white;border-radius:50%}
+.ev-dot{font-size:10px;padding:1px 4px;border-radius:3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev-eval{background:#EAF3DE;color:#27500A}
+.ev-meeting{background:#E6F1FB;color:#0C447C}
+.ev-other{background:var(--pk-light);color:var(--pk-dark)}
+/* 已讀功能 */
+.checkin-row{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--border);margin-top:4px;flex-wrap:wrap}
+.checkin-btn{padding:4px 12px;border-radius:var(--r);border:1px solid var(--pk);background:var(--pk);color:white;font-size:11px;cursor:pointer;font-family:inherit}
+.checkin-btn.done{background:#EAFAF1;border-color:#A9DFBF;color:#1a5c35;cursor:default}
+.readers-wrap{margin-top:6px;display:flex;flex-wrap:wrap;gap:4px}
+.reader-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;background:var(--pk-light);font-size:11px;color:var(--pk-dark)}
+/* 近期活動 */
+.ev-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+.ev-item:last-child{border-bottom:none}
+.ev-badge{width:34px;text-align:center;flex-shrink:0}
+.ev-badge-m{font-size:10px;color:var(--text2)}
+.ev-badge-d{font-size:17px;font-weight:600;color:var(--text);line-height:1}
+.ev-info-title{font-size:12px;font-weight:600;color:var(--text)}
+.ev-info-note{font-size:11px;color:var(--text2);margin-top:1px}
+.ev-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:20px;margin-left:5px}
+.ev-del{font-size:11px;color:var(--text3);cursor:pointer;padding:2px 5px;border-radius:3px;border:none;background:none;font-family:inherit;margin-left:auto;flex-shrink:0}
+.ev-del:hover{background:var(--pk-light);color:var(--pk)}
+/* Name modal */
+.nm-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.nm-overlay.open{display:flex}
+.nm-box{background:var(--bg);border-radius:var(--rl);padding:1.5rem;width:280px;border:1px solid var(--border)}
+.nm-box h3{font-size:14px;font-weight:600;margin-bottom:.5rem;color:var(--text)}
+.nm-box p{font-size:12px;color:var(--text2);margin-bottom:1rem}
+.nm-box input{width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;font-family:inherit;background:var(--bg2);color:var(--text);margin-bottom:10px}
+.nm-box input:focus{outline:none;border-color:var(--pk)}
+.nm-btns{display:flex;gap:8px}
+.nm-ok{flex:1;padding:8px;background:var(--pk);color:white;border:none;border-radius:var(--r);font-size:13px;cursor:pointer;font-family:inherit}
+.nm-cancel{padding:8px 14px;background:transparent;border:1px solid var(--border2);border-radius:var(--r);font-size:13px;cursor:pointer;font-family:inherit;color:var(--text2)}
+/* Cal modal */
+.cal-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.cal-modal-overlay.open{display:flex}
+.cal-modal-box{background:var(--bg);border-radius:var(--rl);padding:1.5rem;width:290px;border:1px solid var(--border)}
+.cal-modal-box h3{font-size:14px;font-weight:600;margin-bottom:1rem;color:var(--text)}
+
 </style>
 </head>
 <body>
-<div class="toast" id="toast"></div>
+<div class="page">
+<div class="hdr">
+  <div class="logo">ANB</div>
+  <div><div class="hdr-t">安橋股份有限公司 員工資訊平台</div><div class="hdr-s">行政管理處－人資部｜內部同仁查詢專區</div></div>
+</div>
+<div class="tabs">
+  <button class="tb on" onclick="showTab('notice',this)">📌 公告欄</button>
+  <button class="tb" onclick="showTab('cal',this)">📅 行事曆</button>
+  <button class="tb" onclick="showTab('welfare',this)">員工福利</button>
+  <button class="tb" onclick="showTab('leave',this)">請假與出勤</button>
+  <button class="tb" onclick="showTab('eval',this)">📊 考核標準</button>
+  <button class="tb" onclick="showTab('bonus',this)">💰 獎金制度</button>
+  <button class="tb" onclick="showTab('org',this)">組織架構</button>
+  <button class="tb" onclick="showTab('clock',this)">打卡系統</button>
+  <button class="tb" onclick="showTab('complaint',this)">💬 我有話想說</button>
+</div>
+<div class="main">
+<div class="ip">
 
-<!-- Login Screen -->
-<div class="login-screen" id="loginScreen">
-  <div class="login-card">
-    <h3 id="loginTitle">🔐 進入會議</h3>
-    <p>此會議設有存取限制，請選擇方式進入</p>
-    <div class="login-meta" id="loginMeta"></div>
-    <div class="login-sec ls-name">
-      <div class="ls-title">👤 方式一：輸入姓名（人員名單）</div>
-      <input class="login-input" id="loginName" placeholder="輸入你的姓名" onkeydown="if(event.key==='Enter')doLogin()">
-      <div style="font-size:11px;color:var(--t);margin-top:4px">系統自動比對，套用對應權限</div>
-    </div>
-    <div class="login-sec ls-pwd">
-      <div class="ls-title">🔑 方式二：輸入密碼</div>
-      <div id="loginPwdFields"></div>
-    </div>
-    <div class="login-error" id="loginError">姓名不在名單中，或密碼錯誤</div>
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn" onclick="cancelLogin()" style="flex:1">返回</button>
-      <button class="btn btn-primary" onclick="doLogin()" style="flex:2">進入</button>
-    </div>
+<!-- 公告欄 -->
+<div class="sec on" id="sec-notice">
+  <div class="stitle">公告欄</div>
+  <div class="ib bl">人資部可在此發布最新公告，同仁可即時查閱並簽到確認已讀。公告儲存在瀏覽器，可隨時新增或刪除。</div>
+
+  <div class="ssub">發布新公告（人資專用）</div>
+  <div class="na">
+    <input type="text" id="ni" placeholder="輸入公告內容…" onkeydown="if(event.key==='Enter')addNotice()"/>
+    <button class="nab" onclick="addNotice()">＋ 發布</button>
   </div>
+
+  <div class="ssub">最新公告</div>
+  <div id="nl"></div>
 </div>
 
-<!-- Modals -->
-<div class="modal-bg" id="mtgModal" onclick="if(event.target===this)closeModal('mtgModal')">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('mtgModal')">✕</button>
-    <h3 id="mtgModalTitle">新增會議</h3>
-    <div class="frow">
-      <div class="fg"><label>會議名稱 *</label><input id="nm-title" placeholder="115年回購計畫推廣案"></div>
-      <div class="fg"><label>會議日期</label><input id="nm-date" type="date"></div>
+<!-- 行事曆 -->
+<div class="sec" id="sec-cal">
+  <div class="stitle">📅 人資行事曆</div>
+  <div class="ib bl">人資可新增考核、會議等重要日期，同仁一目瞭然。</div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="nab" style="padding:5px 10px;font-size:12px" onclick="changeMonth(-1)">‹</button>
+      <span id="cal-title" style="font-size:14px;font-weight:600;color:var(--text)"></span>
+      <button class="nab" style="padding:5px 10px;font-size:12px" onclick="changeMonth(1)">›</button>
     </div>
-    <div class="frow">
-      <div class="fg"><label>主持人</label><input id="nm-host" placeholder="姓名 / 職稱"></div>
-      <div class="fg"><label>地點</label><input id="nm-loc" placeholder="會議室 / 線上"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>專案名稱</label><input id="nm-proj" placeholder="專案名稱"></div>
-      <div class="fg"><label>截止日</label><input id="nm-dl" type="date"></div>
-    </div>
-    <div style="border-top:1px solid var(--bd);margin:12px 0;padding-top:12px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:9px">🔐 存取密碼<span style="font-size:11px;color:var(--tx3);font-weight:400;margin-left:6px">（留空＝所有人可看）</span></div>
-      <div class="pwd-row">
-        <label><span class="pwd-tag tag-host">主持人</span></label>
-        <input class="pwd-input" type="password" id="nm-ph" placeholder="可全部修改">
-        <button class="btn btn-sm" onclick="togglePwd('nm-ph')">顯示</button>
-      </div>
-      <div class="pwd-row">
-        <label><span class="pwd-tag tag-edit">編輯者</span></label>
-        <input class="pwd-input" type="password" id="nm-pe" placeholder="可修改內容">
-        <button class="btn btn-sm" onclick="togglePwd('nm-pe')">顯示</button>
-      </div>
-      <div class="pwd-row">
-        <label><span class="pwd-tag tag-view">檢視者</span></label>
-        <input class="pwd-input" type="password" id="nm-pv" placeholder="只能查看">
-        <button class="btn btn-sm" onclick="togglePwd('nm-pv')">顯示</button>
-      </div>
-      <p style="font-size:11px;color:var(--tx3);margin-top:6px">會議列表所有人都看得到，密碼只控制進入後能看到什麼內容。</p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('mtgModal')">取消</button>
-      <button class="btn btn-primary" id="mtgSaveBtn" onclick="saveMtgModal()">建立會議</button>
-    </div>
+    <button class="nab" onclick="openCalModal()">＋ 新增活動</button>
   </div>
+
+  <div class="tw" style="margin-bottom:1rem">
+    <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);border-collapse:collapse"></div>
+  </div>
+
+  <div class="ssub">近期活動</div>
+  <div id="upcoming-list"></div>
+</div>
+<!-- 員工福利 -->
+<div class="sec" id="sec-welfare">
+  <div class="stitle">員工福利介紹</div>
+  <div class="ib">正式員工適用（不含試用期、PT、約聘）｜每月扣福利金（全薪 0.5%）<br>統編：<strong>90374325</strong>　抬頭：<strong>安橋股份有限公司</strong></div>
+  <div class="ssub">每月固定福利</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">每月下午茶</div><div class="val">每月一次</div></div>
+    <div class="card"><div class="lbl">每月員購金</div><div class="val">NT$500</div></div>
+    <div class="card"><div class="lbl">三節員購金</div><div class="val">NT$800／節</div></div>
+    <div class="card"><div class="lbl">生日員購金</div><div class="val">NT$1,000</div></div>
+    <div class="card"><div class="lbl">三節禮金</div><div class="val">NT$1,000／節</div></div>
+    <div class="card"><div class="lbl">生日禮金</div><div class="val">NT$1,000</div></div>
+  </div>
+  <div class="ssub">需自行申請津貼</div>
+  <div class="tw"><table>
+    <thead><tr><th>項目</th><th>金額</th><th>所需文件</th></tr></thead>
+    <tbody>
+      <tr><td>運動津貼</td><td>每月上限 NT$500</td><td>含統編發票或大小章收據（不含器材衣物）</td></tr>
+      <tr><td>生育津貼</td><td>NT$2,000（以胎次計）</td><td>出生證明</td></tr>
+      <tr><td>結婚津貼</td><td>NT$3,600</td><td>身分證正反面＋戶口名簿</td></tr>
+      <tr><td>喪葬津貼</td><td>NT$2,500</td><td>正本訃聞（向人資申請）<br><span style="color:var(--text2);font-size:11px">※ 適用對象：直系親屬與配偶</span></td></tr>
+    </tbody>
+  </table></div>
+  <div class="ib">員購網：到職 1–3 天內人資協助建立帳號，員購金效期三個月。</div>
 </div>
 
-<div class="modal-bg" id="attModal" onclick="if(event.target===this)closeModal('attModal')">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal('attModal')">✕</button>
-    <h3>新增與會人員</h3>
-    <div class="frow">
-      <div class="fg"><label>姓名 *</label><input id="att-name" placeholder="姓名"></div>
-      <div class="fg"><label>職稱 / 部門</label><input id="att-dept" placeholder="部門"></div>
-    </div>
-    <div class="frow">
-      <div class="fg"><label>Email（選填）</label><input id="att-email" type="email" placeholder="email@example.com"></div>
-      <div class="fg"><label>角色 / 權限</label>
-        <select id="att-perm" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--bd);border-radius:var(--rs)">
-          <option value="host">主持人（可全改）</option>
-          <option value="edit" selected>編輯者（可改內容）</option>
-          <option value="view">檢視者（僅查看）</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('attModal')">取消</button>
-      <button class="btn btn-primary" onclick="addAttendee()">新增</button>
-    </div>
+<!-- 請假與出勤 -->
+<div class="sec" id="sec-leave">
+  <div class="stitle">請假與出勤規定</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">早班</div><div class="val">09:00–18:00</div></div>
+    <div class="card"><div class="lbl">晚班</div><div class="val">10:00–19:00</div></div>
+    <div class="card"><div class="lbl">午休</div><div class="val">中間 1 小時</div></div>
+    <div class="card"><div class="lbl">遲到</div><div class="val">請 1 小時事假</div></div>
   </div>
+  <div class="ssub">特休年資對照（週年制）</div>
+  <div class="tw"><table>
+    <thead><tr><th>年資</th><th>特休天數</th></tr></thead>
+    <tbody>
+      <tr><td>滿半年</td><td>3 天</td></tr>
+      <tr><td>滿 1 年</td><td>7 天</td></tr>
+      <tr><td>滿 2 年</td><td>10 天</td></tr>
+      <tr><td>滿 3–4 年</td><td>14 天</td></tr>
+      <tr><td>滿 5–9 年</td><td>15 天</td></tr>
+      <tr><td>滿 10 年以上</td><td>每年＋1天，最高 30 天</td></tr>
+    </tbody>
+  </table></div>
+  <div class="ssub">特休預告天數</div>
+  <div class="tw"><table>
+    <thead><tr><th>請假天數</th><th>預告天數</th></tr></thead>
+    <tbody>
+      <tr><td>1 天</td><td>10 個工作天前</td></tr>
+      <tr><td>2 天</td><td>20 個工作天前</td></tr>
+      <tr><td>3 天</td><td>30 個工作天前</td></tr>
+    </tbody>
+  </table></div>
+  <div class="ssub">各假別（點選展開）</div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tr">事假</span>一年不超過 14 日（含家庭照顧假）</span><span class="cv">▼</span></div><div class="ab">臨時事假上班 1 小時前向主管告知取得同意。事假不給薪資。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tr">病假</span>附看診收據，1小時前告知</span><span class="cv">▼</span></div><div class="ab">上班 1 小時前告知主管，附看診收據。連續 16 小時以上附診斷證明。一年 30 天有薪（薪資折半），第 31 天起無薪。<br>生理假：每月 1 日，超過 3 日的部分則併入病假計算，薪資減半。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tr">婚假</span>8日 ／ 工資照給</span><span class="cv">▼</span></div><div class="ab">結婚登記日前 10 日起 3 個月內請休。需身分證正反面及戶口名簿或戶籍謄本。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tr">產假／陪產假</span>附媽媽手冊或出生證明</span><span class="cv">▼</span></div><div class="ab">產假：56 天一次休完（到職滿 6 個月工資照給，未滿折半）。<br>產檢假：56 小時，妊娠期間。陪產假：7 天，配偶分娩前後 15 天內，工資照給。<br>育嬰假：到職滿半年可申請。安胎假：需醫師診斷證明。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tr">喪假</span>3–8天 ／ 工資照給，附正本訃聞</span><span class="cv">▼</span></div><div class="ab">父母、配偶：8 日。祖父母、子女、配偶父母：6 日。曾祖父母、兄弟姊妹：3 日。百日內分次申請。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tr">家庭照顧假</span>與事假合計全年不超 14 日</span><span class="cv">▼</span></div><div class="ab">家屬預防接種、嚴重疾病或重大事故需親自照顧。需主管同意＋看診收據。對象含公婆、岳父母。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)"><span><span class="tag tb2">出差</span>前一天申請，離返均需打卡</span><span class="cv">▼</span></div><div class="ab">非整日出差：離開及返回公司均需打卡。整日出差：不需打卡。<br>住宿費：國內每日上限 NT$3,000。膳雜費：國內每餐上限 NT$200。</div></div>
+  <div class="ib">請假方式：<strong>Line 官方帳號</strong> 或 <strong>Easy Flow</strong>，以小時為單位。</div>
 </div>
 
-<div class="modal-bg" id="confirmModal">
-  <div class="modal" style="max-width:340px">
-    <p id="confirmMsg" style="font-size:14px;color:var(--tx);margin-bottom:16px;line-height:1.6"></p>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('confirmModal');if(window._cfRej)window._cfRej()">取消</button>
-      <button class="btn btn-danger" id="confirmOkBtn" onclick="closeModal('confirmModal');if(window._cfRes)window._cfRes()">確定</button>
+<!-- 組織架構 -->
+<div class="sec" id="sec-org">
+  <div class="stitle">ANB 安橋組織架構（2026.04.28 更新）</div>
+  <div class="ow">
+    <div class="olv"><div class="on2 top"><div class="on">魏千惠 總經理</div><div class="or">ANB General Manager</div></div></div>
+    <div class="oc"></div>
+    <div class="olv">
+      <div class="on2 mid"><div class="on">電銷處</div><div class="or">郭品君 副理</div></div>
+      <div class="on2 mid"><div class="on">培訓處</div><div class="or">蔡秋月 副理</div></div>
+      <div class="on2 mid"><div class="on">客服處</div><div class="or">洪婉瑜 副理</div></div>
+    </div>
+    <div class="oc"></div>
+    <div class="olv" style="gap:5px">
+      <div class="on2"><div class="on">南_B部</div><div class="or">郭品君 副理</div></div>
+      <div class="on2"><div class="on">話術培訓部</div><div class="or">楊凱涵 儲備講師</div></div>
+      <div class="on2"><div class="on">客服A部</div><div class="or">莊雯淇 組長</div></div>
+      <div class="on2"><div class="on">客服B部</div><div class="or">陳姿吟 組長</div></div>
     </div>
   </div>
+  <div class="ssub" style="margin-top:1rem">電銷處 南_B部 專員</div>
+  <div class="ib">洪欣伶、楊凱涵、黃于倢、傅雅筠、李懿倉、李培榕</div>
+  <div class="ssub">培訓處 話術培訓部</div>
+  <div class="ib">楊凱涵 儲備講師</div>
+  <div class="ssub">客服A部</div>
+  <div class="ib">莊雯淇 組長｜南_A部：邱靜怡 專員、吳秀燕 專員</div>
+  <div class="ssub">客服B部</div>
+  <div class="ib">陳姿吟 組長｜南_B部：洪淑秋 專員</div>
 </div>
 
-<!-- App -->
-<div class="app">
-<aside class="sb">
-  <div class="sb-logo">
-    <h1>多會議記錄系統</h1>
-    <p>雲端共用版 · Google Sheets</p>
+<!-- 打卡系統 -->
+<div class="sec" id="sec-clock">
+  <div class="stitle">打卡系統說明（鼎新電腦）</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">打卡方式</div><div class="val">Line 官方帳號</div></div>
+    <div class="card"><div class="lbl">最早打卡</div><div class="val">08:30 以後</div></div>
+    <div class="card"><div class="lbl">地點</div><div class="val">須在辦公室</div></div>
+    <div class="card"><div class="lbl">加班起算</div><div class="val">滿 9 小時後</div></div>
   </div>
-  <div class="sb-sync">
-    <div class="sb-status-dot" id="syncDot" style="width:6px;height:6px;border-radius:50%;background:#EF9F27;flex-shrink:0"></div>
-    <span id="syncLabel">連線中⋯</span>
-  </div>
-  <div class="sb-sec">所有人共用的會議列表</div>
-  <div class="sb-list" id="sbList"></div>
-  <div class="sb-actions">
-    <button class="sb-btn sb-btn-add" onclick="openNewMtgModal()">＋ 新增會議</button>
-    <button class="sb-btn sb-btn-export" onclick="refreshAll()">↻ 重新整理</button>
-  </div>
-  <div class="sb-bot">資料存於 Google Sheets<br>三層權限：主持 / 編輯 / 檢視<br>密碼制 + 人員名單制</div>
-</aside>
-
-<main class="main">
-  <div class="center" id="emptyState" style="display:flex">
-    <div class="center-icon">📋</div>
-    <div class="center-title" id="emptyTitle">連線中⋯</div>
-    <div class="center-desc" id="emptyDesc">正在從 Google Sheets 載入會議資料</div>
-  </div>
-
-  <div class="center" id="lockedState" style="display:none">
-    <div class="center-icon">🔒</div>
-    <div class="center-title" id="lockedTitle">此會議受密碼保護</div>
-    <div class="center-desc">請輸入密碼或姓名進入</div>
-    <div id="lockedMeta" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px"></div>
-    <button class="btn btn-primary" onclick="openLoginScreen()" style="margin-top:12px;padding:9px 26px">🔑 輸入密碼進入</button>
-  </div>
-
-  <div id="mtgView" style="display:none">
-    <div class="mtg-hdr">
-      <div class="mtg-hdr-top">
-        <div>
-          <div class="mtg-title">
-            <span id="vTitle">—</span>
-            <span class="perm-pill" id="permPill"></span>
-          </div>
-          <div class="mtg-meta">
-            <div class="mtg-meta-item">📅 <strong id="vDate">—</strong></div>
-            <div class="mtg-meta-item">👤 <strong id="vHost">—</strong></div>
-            <div class="mtg-meta-item">📍 <strong id="vLoc">—</strong></div>
-            <div class="mtg-meta-item">🗂 <strong id="vProject">—</strong></div>
-          </div>
-        </div>
-        <div class="mtg-acts">
-          <button class="btn btn-sm" id="btnEdit" onclick="openEditMtgModal()">編輯資訊</button>
-          <button class="btn btn-sm" onclick="exportTxt()">匯出 TXT</button>
-          <button class="btn btn-sm btn-danger" id="btnDel" onclick="delMeeting()">刪除</button>
-          <button class="btn btn-sm btn-primary" id="btnSave" onclick="saveNow()">儲存</button>
-        </div>
-      </div>
-      <div id="vDeadline" style="display:none;margin-top:10px" class="alert alert-warn">
-        <span>⚠</span><span id="vDeadlineMsg"></span>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab(this,'overview')">概覽</button>
-      <button class="tab" onclick="switchTab(this,'checkin')">出席打卡<span class="tab-badge" id="tbCheckin">0/0</span></button>
-      <button class="tab" onclick="switchTab(this,'summary')">摘要決策</button>
-      <button class="tab" onclick="switchTab(this,'todo')">待辦事項<span class="tab-badge" id="tbTodo">0</span></button>
-      <button class="tab" id="tabAI" onclick="switchTab(this,'ai')">AI 分析</button>
-      <button class="tab" onclick="switchTab(this,'perm')">🔐 權限</button>
-    </div>
-
-    <div>
-      <!-- Overview -->
-      <div class="tc active" id="tc-overview">
-        <div class="stats">
-          <div class="stat"><div class="stat-n" id="ovPresent">0/0</div><div class="stat-l">出席人數</div></div>
-          <div class="stat"><div class="stat-n" id="ovDec">0</div><div class="stat-l">決策事項</div></div>
-          <div class="stat"><div class="stat-n" id="ovTodo">0</div><div class="stat-l">待辦未完成</div></div>
-          <div class="stat"><div class="stat-n" id="ovDays">—</div><div class="stat-l">距截止日</div></div>
-        </div>
-        <div class="card">
-          <div class="card-hdr"><h3>近期待辦</h3><button class="btn btn-sm" onclick="switchTab(null,'todo')">查看全部</button></div>
-          <div class="item-list" id="ovTodoList"><p style="font-size:13px;color:var(--tx3)">尚無待辦</p></div>
-        </div>
-      </div>
-
-      <!-- Checkin -->
-      <div class="tc" id="tc-checkin">
-        <div class="card">
-          <div class="card-hdr">
-            <h3>與會人員 <span id="checkinCnt" style="font-size:12px;color:var(--tx3);font-weight:400"></span></h3>
-            <div style="display:flex;gap:6px" id="attActions">
-              <button class="btn btn-sm" onclick="openModal('attModal')">＋ 新增</button>
-              <button class="btn btn-sm" onclick="checkAll()">全部簽到</button>
-            </div>
-          </div>
-          <div class="att-grid" id="attGrid"></div>
-          <p id="noAtt" style="font-size:13px;color:var(--tx3);padding:8px 0">尚未新增與會人員</p>
-        </div>
-        <div class="card">
-          <div class="card-hdr"><h3>打卡記錄</h3><button class="btn btn-sm btn-danger" id="btnClearLog" onclick="clearLog()">清除</button></div>
-          <div id="logList" style="font-size:13px;color:var(--tx3)">尚無記錄</div>
-        </div>
-      </div>
-
-      <!-- Summary -->
-      <div class="tc" id="tc-summary">
-        <div class="card">
-          <div class="card-hdr"><h3>會議摘要</h3><button class="btn btn-sm" id="btnClearSum" onclick="clearSum()">清除</button></div>
-          <div class="sum-box" id="sumBox" contenteditable="true" data-ph="點此輸入或 AI 分析後自動填入⋯"></div>
-        </div>
-        <div class="card">
-          <div class="card-hdr"><h3>決策事項</h3></div>
-          <div class="item-list" id="decList"></div>
-          <p id="noDec" style="font-size:13px;color:var(--tx3);margin-bottom:10px">尚無決策事項</p>
-          <div class="add-form" id="decForm">
-            <input class="grow" id="decTxt" placeholder="輸入決策內容⋯" onkeydown="if(event.key==='Enter')addDec()">
-            <input id="decOwner" placeholder="負責人" style="width:85px">
-            <select id="decCat"><option value="product">產品</option><option value="tech">技術</option><option value="process">流程</option><option value="other">其他</option></select>
-            <button class="btn btn-primary btn-sm" onclick="addDec()">新增</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Todo -->
-      <div class="tc" id="tc-todo">
-        <div class="card">
-          <div class="card-hdr">
-            <h3>待辦事項 <span style="font-size:12px;color:var(--tx3);font-weight:400">共 <b id="todoTotal">0</b> · 未完 <b id="todoPend">0</b></span></h3>
-            <button class="btn btn-sm btn-danger" id="btnClearDone" onclick="clearDone()">清除已完成</button>
-          </div>
-          <div class="tags">
-            <span class="tag on" onclick="ftTodo(this,'all')">全部</span>
-            <span class="tag" onclick="ftTodo(this,'pending')">未完成</span>
-            <span class="tag" onclick="ftTodo(this,'done')">已完成</span>
-            <span class="tag" onclick="ftTodo(this,'urgent')">緊急</span>
-          </div>
-          <div class="item-list" id="todoList"></div>
-          <p id="noTodo" style="font-size:13px;color:var(--tx3);margin-bottom:10px">尚無待辦事項</p>
-          <div class="add-form" id="todoForm">
-            <input class="grow" id="todoTxt" placeholder="輸入待辦事項⋯" onkeydown="if(event.key==='Enter')addTodo()">
-            <input id="todoOwner" placeholder="負責人" style="width:82px">
-            <input id="todoDue" type="date" style="width:128px">
-            <select id="todoUrgent"><option value="0">一般</option><option value="1">緊急</option></select>
-            <button class="btn btn-primary btn-sm" onclick="addTodo()">新增</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- AI -->
-      <div class="tc" id="tc-ai">
-        <div class="alert alert-info">
-          <span>💡</span>
-          <span>在 Claude.ai 對話裡上傳 .docx，Claude 分析後把 JSON 貼到下方即可。</span>
-        </div>
-        <div class="card">
-          <div class="card-hdr">
-            <h3>貼入 Claude 回覆的 JSON</h3>
-            <button class="btn btn-primary" id="fillBtn" onclick="fillAI()">✦ 填入系統</button>
-          </div>
-          <textarea class="paste-area" id="aiInput" rows="7" placeholder='{
-  "summary": "會議摘要...",
-  "decisions": [{"text":"決策","owner":"負責人","cat":"process"}],
-  "todos": [{"text":"待辦","owner":"負責人","due":"2026-05-31","urgent":true}]
-}'></textarea>
-          <div id="fillRes" style="display:none;margin-top:8px"></div>
-        </div>
-      </div>
-
-      <!-- Perm -->
-      <div class="tc" id="tc-perm">
-        <div class="card">
-          <div class="card-hdr"><h3>🔐 三層權限說明</h3></div>
-          <table class="perm-matrix">
-            <thead><tr><th>功能</th><th><span class="pwd-tag tag-host">主持人</span></th><th><span class="pwd-tag tag-edit">編輯者</span></th><th><span class="pwd-tag tag-view">檢視者</span></th></tr></thead>
-            <tbody>
-              <tr><td>看到會議列表</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td></tr>
-              <tr><td>查看會議內容</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td></tr>
-              <tr><td>新增 / 修改摘要、決策、待辦</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-x">—</span></td></tr>
-              <tr><td>出席打卡</td><td><span class="perm-check">✓</span></td><td><span class="perm-check">✓</span></td><td><span class="perm-x">—</span></td></tr>
-              <tr><td>修改密碼 / 刪除會議</td><td><span class="perm-check">✓</span></td><td><span class="perm-x">—</span></td><td><span class="perm-x">—</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="card">
-          <div class="card-hdr"><h3>⚙ 權限設定</h3><span style="font-size:12px;color:var(--tx3)">主持人才能修改</span></div>
-          <div id="permEditArea"><p style="font-size:13px;color:var(--tx3)">需要主持人權限。</p></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</main>
+  <div class="ssub">Line 帳號連動步驟</div>
+  <div class="sr"><div class="sn">1</div><div><div class="st">掃描 QR Code 加入 HR 官方帳號</div><div class="sd">請向人資組長莊雯淇索取 QR Code，掃描後同意服務條款並許可存取個人資料</div></div></div>
+  <div class="sr"><div class="sn">2</div><div><div class="st">許可官方帳號存取資料</div><div class="sd">首次使用任意功能時需先許可</div></div></div>
+  <div class="sr"><div class="sn">3</div><div><div class="st">輸入工號與身份證完成連動</div><div class="sd">看到「連動成功」即可開始使用</div></div></div>
+  <div class="ssub">常見問題</div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)">工號已連動 / Line帳號已連動 錯誤<span class="cv">▼</span></div><div class="ab">可能因換手機或輸入錯誤工號導致。需由<strong>人資手動解除 Line 連動</strong>後重新操作。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)">打卡出現「無法取得位置」<span class="cv">▼</span></div><div class="ab">Android：設定→位置→開啟，允許LINE取用位置。iOS：設定→隱私權→定位服務→開啟。iOS需升至16.5以上。</div></div>
+  <div class="ai"><div class="ah" onclick="toggleAcc(this)">打卡頁面顯示空白（iOS）<span class="cv">▼</span></div><div class="ab">iOS 16.4以下有此問題，升至16.5以上即可解決。</div></div>
+  <div class="ib">加班計算：上班滿 9 小時，依勞基法休息 30 分鐘後，才開始計算加班時數。</div>
 </div>
 
-<script>
-/* ════════ GOOGLE APPS SCRIPT API ════════ */
-const API_URL = 'https://script.google.com/macros/s/AKfycbz79nfBkr3BoZHhAD542F5qEG_vzYsVGXa0V3ZW2qScSYwl5ah1EUMPRrj2tLi4HnVLnw/exec';
-
-async function apiCall(action, data=null){
-  try{
-    if(action==='getAll'||action==='ping'){
-      const res=await fetch(`${API_URL}?action=${action}`, {redirect:'follow'});
-      return await res.json();
-    } else {
-      // Apps Script POST: send data as URL param to avoid CORS preflight
-      const body = data ? JSON.stringify(data) : '{}';
-      const url = `${API_URL}?action=${action}`;
-      const res = await fetch(url, {
-        method: 'POST',
-        body: body,
-        headers: {'Content-Type': 'text/plain;charset=utf-8'},
-        redirect: 'follow'
-      });
-      return await res.json();
-    }
-  }catch(e){
-    return {error:e.message};
-  }
-}
-
-/* ════════ STATE ════════ */
-let meetings={};
-let curId=null, curPerm=null, todoFilter='all', rawDocText='';
-let _loginTargetId=null;
-
-function cur(){return meetings[curId]||null;}
-function canEdit(){return curPerm==='host'||curPerm==='edit';}
-function canHost(){return curPerm==='host';}
-function gId(id){return document.getElementById(id);}
-function gv(id){return(gId(id)||{}).value||'';}
-
-/* ════════ INIT & SYNC ════════ */
-async function init(){
-  setSyncStatus('busy','連線中⋯');
-  const res=await apiCall('getAll');
-  if(res.error){
-    setSyncStatus('err','連線失敗');
-    gId('emptyTitle').textContent='連線失敗';
-    gId('emptyDesc').textContent='請確認網路連線，或重新整理頁面';
-    return;
-  }
-  meetings=res.meetings||{};
-  setSyncStatus('ok','已連線');
-  renderSidebar();
-  // 若沒有會議
-  const keys=Object.keys(meetings);
-  if(keys.length===0){
-    gId('emptyTitle').textContent='尚無會議記錄';
-    gId('emptyDesc').textContent='點擊左側「＋ 新增會議」建立第一場會議';
-  }
-}
-
-async function refreshAll(){
-  setSyncStatus('busy','更新中⋯');
-  const res=await apiCall('getAll');
-  if(res.error){setSyncStatus('err','更新失敗');toast('❌ 更新失敗：'+res.error);return;}
-  meetings=res.meetings||{};
-  setSyncStatus('ok','已更新');
-  renderSidebar();
-  if(curId&&meetings[curId]) renderMeeting();
-  toast('✓ 資料已更新');
-}
-
-async function pushMeeting(m){
-  setSyncStatus('busy','儲存中⋯');
-  const res=await apiCall('save',m);
-  if(res.error){setSyncStatus('err','儲存失敗');toast('❌ 儲存失敗：'+res.error);}
-  else{meetings[m.id]=m;setSyncStatus('ok','已儲存');renderSidebar();}
-  return res;
-}
-
-async function removeMeeting(id){
-  setSyncStatus('busy','刪除中⋯');
-  const res=await apiCall('delete',{id});
-  if(res.error){setSyncStatus('err','刪除失敗');toast('❌ 刪除失敗');}
-  else{delete meetings[id];setSyncStatus('ok','已刪除');renderSidebar();}
-  return res;
-}
-
-function setSyncStatus(status,label){
-  const dot=gId('syncDot'),lbl=gId('syncLabel');
-  const colors={ok:'#1B9B71',busy:'#EF9F27',err:'#9E2B2B'};
-  dot.style.background=colors[status]||'#8A8680';
-  dot.style.animation=status==='busy'?'pulse .8s infinite':'none';
-  lbl.textContent=label;
-}
-
-/* ════════ SIDEBAR ════════ */
-function renderSidebar(){
-  const el=gId('sbList');
-  const list=Object.values(meetings).sort((a,b)=>(b.info.date||'').localeCompare(a.info.date||''));
-  if(!list.length){
-    el.innerHTML='<div style="padding:10px 14px;font-size:12px;color:rgba(255,255,255,.3)">尚無會議</div>';
-    return;
-  }
-  el.innerHTML=list.map(m=>{
-    const p=m.pwds||{};
-    const locked=p.host||p.edit||p.view||Object.keys(m.atts||{}).length>0;
-    let dotColor='#1B9B71', badgeBg='#EAF3DE', badgeColor='#255009', badgeTxt='公開';
-    if(m.id===curId&&curPerm){
-      const map={host:['#7F77DD','#EEEDFE','#3C3489','主持人'],edit:['#1D9E75','#EAF3DE','#255009','編輯者'],view:['#8A8680','#EDEAE4','#585450','檢視者']};
-      const info=map[curPerm]||map.view;
-      dotColor=info[0];badgeBg=info[1];badgeColor=info[2];badgeTxt=info[3];
-    } else if(locked){
-      dotColor='#8A8680';badgeBg='#EDEAE4';badgeColor='#585450';badgeTxt='🔒 需驗證';
-    }
-    return `<div class="sb-item ${m.id===curId?'active':''}" onclick="selectMeeting('${m.id}')">
-      <div class="sb-dot" style="background:${dotColor}"></div>
-      <div class="sb-info">
-        <div class="sb-name">${m.info.title||'未命名'}</div>
-        <div class="sb-date">${m.info.date||'未填日期'}</div>
-      </div>
-      <span class="sb-badge" style="background:${badgeBg};color:${badgeColor}">${badgeTxt}</span>
-    </div>`;
-  }).join('');
-}
-
-/* ════════ SELECT & LOGIN ════════ */
-function selectMeeting(id){
-  const m=meetings[id]; if(!m) return;
-  const p=m.pwds||{};
-  const atts=Object.values(m.atts||{});
-  const needLogin=p.host||p.edit||p.view||atts.length>0;
-
-  if(id===curId&&curPerm){ enterMeeting(id,curPerm); return; }
-
-  if(!needLogin){ enterMeeting(id,'host'); }
-  else{ _loginTargetId=id; showLockedPreview(m); }
-}
-
-function showLockedPreview(m){
-  curId=m.id; curPerm=null;
-  gId('emptyState').style.display='none';
-  gId('lockedState').style.display='flex';
-  gId('mtgView').style.display='none';
-  gId('lockedTitle').textContent=m.info.title;
-  const i=m.info;
-  const parts=[];
-  if(i.date) parts.push(`📅 ${i.date}`);
-  if(i.host) parts.push(`👤 ${i.host}`);
-  if(i.location) parts.push(`📍 ${i.location}`);
-  gId('lockedMeta').innerHTML=parts.map(p=>`<span style="background:var(--s2);padding:4px 9px;border-radius:var(--rs);border:1px solid var(--bd);font-size:12px;color:var(--tx2)">${p}</span>`).join('');
-  renderSidebar();
-}
-
-function openLoginScreen(){
-  const m=meetings[_loginTargetId||curId]; if(!m) return;
-  const p=m.pwds||{};
-  gId('loginTitle').textContent=`🔐 ${m.info.title}`;
-  gId('loginError').style.display='none';
-  if(gId('loginName')) gId('loginName').value='';
-  const i=m.info;
-  const parts=[];
-  if(i.date) parts.push(`📅 ${i.date}`);
-  if(i.host) parts.push(`👤 ${i.host}`);
-  gId('loginMeta').innerHTML=parts.map(p=>`<span>${p}</span>`).join('');
-  const lvls=[];
-  if(p.host) lvls.push({k:'host',l:'主持人',c:'tag-host'});
-  if(p.edit) lvls.push({k:'edit',l:'編輯者',c:'tag-edit'});
-  if(p.view) lvls.push({k:'view',l:'檢視者',c:'tag-view'});
-  gId('loginPwdFields').innerHTML=lvls.length===0
-    ?'<p style="font-size:12px;color:var(--tx3)">此會議未設密碼</p>'
-    :lvls.map(l=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:6px">
-        <span class="pwd-tag ${l.c}" style="flex-shrink:0">${l.l}</span>
-        <input type="password" id="lpw-${l.k}" class="login-input" placeholder="輸入${l.l}密碼" style="margin-bottom:0" onkeydown="if(event.key==='Enter')doLogin()">
-      </div>`).join('');
-  gId('loginScreen').classList.add('open');
-}
-
-function doLogin(){
-  const m=meetings[_loginTargetId||curId]; if(!m) return;
-  const p=m.pwds||{};
-  const atts=Object.values(m.atts||{});
-  const name=(gId('loginName').value||'').trim();
-  // ① 姓名比對
-  if(name){
-    const f=atts.find(a=>a.name===name);
-    if(f){gId('loginScreen').classList.remove('open');enterMeeting(m.id,f.perm||'edit');toast(`✓ 歡迎，${f.name}（${{host:'主持人',edit:'編輯者',view:'檢視者'}[f.perm||'edit']}）`);return;}
-  }
-  // ② 密碼比對
-  for(const k of['host','edit','view']){
-    const el=gId('lpw-'+k); if(!el) continue;
-    const v=(el.value||'').trim();
-    if(v&&p[k]&&v===p[k]){gId('loginScreen').classList.remove('open');enterMeeting(m.id,k);return;}
-  }
-  // ③ 無限制
-  if(!p.host&&!p.edit&&!p.view&&!atts.length){gId('loginScreen').classList.remove('open');enterMeeting(m.id,'host');return;}
-  gId('loginError').style.display='block';
-}
-
-function cancelLogin(){
-  gId('loginScreen').classList.remove('open');
-  curId=null;curPerm=null;
-  gId('emptyState').style.display='flex';
-  gId('lockedState').style.display='none';
-  gId('mtgView').style.display='none';
-  renderSidebar();
-}
-
-function enterMeeting(id,perm){
-  curId=id;curPerm=perm;
-  gId('emptyState').style.display='none';
-  gId('lockedState').style.display='none';
-  gId('mtgView').style.display='block';
-  renderMeeting();applyPermUI();switchTab(null,'overview');renderSidebar();
-}
-
-/* ════════ MEETING MODAL ════════ */
-let _editId=null;
-function openNewMtgModal(){
-  _editId=null;
-  gId('mtgModalTitle').textContent='新增會議';
-  gId('mtgSaveBtn').textContent='建立會議';
-  ['nm-title','nm-date','nm-host','nm-loc','nm-proj','nm-dl','nm-ph','nm-pe','nm-pv'].forEach(id=>{const el=gId(id);if(el)el.value='';});
-  openModal('mtgModal');
-}
-function openEditMtgModal(){
-  const m=cur();if(!m)return;
-  _editId=m.id;
-  gId('mtgModalTitle').textContent='編輯會議資訊';
-  gId('mtgSaveBtn').textContent='儲存';
-  const i=m.info,p=m.pwds||{};
-  gId('nm-title').value=i.title||'';gId('nm-date').value=i.date||'';
-  gId('nm-host').value=i.host||'';gId('nm-loc').value=i.location||'';
-  gId('nm-proj').value=i.project||'';gId('nm-dl').value=i.deadline||'';
-  gId('nm-ph').value=p.host||'';gId('nm-pe').value=p.edit||'';gId('nm-pv').value=p.view||'';
-  openModal('mtgModal');
-}
-async function saveMtgModal(){
-  const title=(gId('nm-title').value||'').trim();if(!title){toast('請填寫會議名稱');return;}
-  gId('mtgSaveBtn').disabled=true;gId('mtgSaveBtn').textContent='儲存中⋯';
-  const info={title,date:gv('nm-date'),host:gv('nm-host'),location:gv('nm-loc'),project:gv('nm-proj'),deadline:gv('nm-dl')};
-  const pwds={host:gv('nm-ph'),edit:gv('nm-pe'),view:gv('nm-pv')};
-  if(_editId){
-    const m=meetings[_editId];if(!m)return;
-    m.info=info;m.pwds=pwds;
-    await pushMeeting(m);closeModal('mtgModal');renderMeeting();applyPermUI();toast('✓ 已更新');
-  } else {
-    const id='m_'+Date.now();
-    const m={id,info,pwds,summary:'',atts:{},decs:{},todos:{},logs:[]};
-    const res=await pushMeeting(m);
-    closeModal('mtgModal');
-    if(!res.error) enterMeeting(id,'host');
-    toast('✓ 會議已建立，所有人都能看到！');
-  }
-  gId('mtgSaveBtn').disabled=false;gId('mtgSaveBtn').textContent='儲存';
-}
-
-/* ════════ RENDER MEETING ════════ */
-function renderMeeting(){
-  const m=cur();if(!m)return;
-  const i=m.info;
-  gId('vTitle').textContent=i.title||'—';
-  gId('vDate').textContent=i.date||'—';
-  gId('vHost').textContent=i.host||'—';
-  gId('vLoc').textContent=i.location||'—';
-  gId('vProject').textContent=i.project||'—';
-  if(i.deadline){
-    const d=Math.ceil((new Date(i.deadline)-new Date())/86400000);
-    const al=gId('vDeadline');
-    if(d>=0&&d<=60){al.style.display='flex';gId('vDeadlineMsg').textContent=`專案截止日 ${i.deadline}，還剩 ${d} 天！`;}
-    else al.style.display='none';
-    gId('ovDays').textContent=d>=0?d+'天':'已截止';
-  } else gId('ovDays').textContent='—';
-  gId('sumBox').innerText=m.summary||'';
-  renderAtts();renderDecs();renderTodos();renderOvTodo();
-  if(canHost())renderPermEdit(m);
-}
-
-async function saveNow(){
-  const m=cur();if(!m)return;
-  m.summary=gId('sumBox').innerText.trim();
-  await pushMeeting(m);toast('✓ 已儲存並同步');
-}
-
-function applyPermUI(){
-  const lb={host:'主持人',edit:'編輯者',view:'檢視者'};
-  const bg={host:'#EEEDFE',edit:'#EAF3DE',view:'#EDEAE4'};
-  const cl={host:'#3C3489',edit:'#0D6B52',view:'#585450'};
-  const pp=gId('permPill');
-  pp.textContent=lb[curPerm]||'—';pp.style.background=bg[curPerm]||'#EDEAE4';pp.style.color=cl[curPerm]||'#585450';
-  const se=(id,v)=>{const el=gId(id);if(el)el.style.display=v?'':'none';};
-  const isEdit=canEdit(),isHost=canHost();
-  se('btnEdit',isHost);se('btnDel',isHost);se('btnSave',isEdit);
-  se('attActions',isEdit);se('btnClearLog',isEdit);
-  se('btnClearSum',isEdit);se('decForm',isEdit);
-  se('todoForm',isEdit);se('btnClearDone',isEdit);
-  se('tabAI',isEdit);
-  gId('sumBox').contentEditable=isEdit?'true':'false';
-  if(isHost)renderPermEdit(cur());
-  else gId('permEditArea').innerHTML='<p style="font-size:13px;color:var(--tx3)">需要主持人權限才能修改。</p>';
-}
-
-function renderPermEdit(m){
-  if(!m)return;
-  const p=m.pwds||{};
-  const attRows=Object.entries(m.atts||{}).map(([k,a])=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--s2);border-radius:var(--rs);margin-bottom:5px;font-size:13px">
-      <span style="flex:1;font-weight:500">${a.name}</span>
-      <span style="font-size:11px;color:var(--tx3)">${a.dept||''}</span>
-      <select onchange="updAttPerm('${k}',this.value)" style="font-size:12px;padding:3px 6px;border:0.5px solid var(--bd);border-radius:var(--rs)">
-        <option value="host" ${a.perm==='host'?'selected':''}>主持人</option>
-        <option value="edit" ${(!a.perm||a.perm==='edit')?'selected':''}>編輯者</option>
-        <option value="view" ${a.perm==='view'?'selected':''}>檢視者</option>
+<!-- 我有話想說 -->
+<div class="sec" id="sec-complaint">
+  <div class="stitle">💬 我有話想說</div>
+  <div class="ib gr">這裡是一個安全、溫暖的空間。不論是工作上的建議、生活上的困擾，或任何想讓主管知道的事，都歡迎你說出來。我們重視每位同仁的聲音。</div>
+  <div class="ib yw">🔒 所有內容均保密處理，公司絕對禁止對反映意見的同仁有任何不利對待。</div>
+  <div class="ssub">選擇想傾訴的對象</div>
+  <div class="cg2">
+    <div class="cc"><div class="ci2">👩‍💼</div><div class="ct">總經理 魏千惠</div><div class="cin">適合：重大事項、跨部門問題</div></div>
+    <div class="cc"><div class="ci2">📚</div><div class="ct">培訓副理 蔡秋月</div><div class="cin">適合：培訓、學習相關問題</div></div>
+    <div class="cc"><div class="ci2">📱</div><div class="ct">電銷副理 郭品君</div><div class="cin">適合：電銷相關、業務問題</div></div>
+    <div class="cc"><div class="ci2">🎧</div><div class="ct">客服副理 洪婉瑜</div><div class="cin">適合：客服相關、服務問題</div></div>
+    <div class="cc"><div class="ci2">💼</div><div class="ct">財務組長 陳姿吟</div><div class="cin">適合：財務、報表相關問題</div></div>
+    <div class="cc"><div class="ci2">👩‍💻</div><div class="ct">人資組長 莊雯淇</div><div class="cin">適合：HR事務、福利、制度</div></div>
+  </div>
+  <div class="ssub">線上表單</div>
+  <div id="cf">
+    <div class="fg">
+      <label class="fl">想說給誰聽？ <span style="color:var(--pk)">*</span></label>
+      <select class="fs" id="cto">
+        <option value="">請選擇收件對象…</option>
+        <option value="總經理 魏千惠">總經理 魏千惠</option>
+        <option value="培訓副理 蔡秋月">培訓副理 蔡秋月</option>
+        <option value="電銷副理 郭品君">電銷副理 郭品君</option>
+        <option value="客服副理 洪婉瑜">客服副理 洪婉瑜</option>
+        <option value="財務組長 陳姿吟">財務組長 陳姿吟</option>
+        <option value="人資組長 莊雯淇">人資組長 莊雯淇</option>
       </select>
-      <button class="xbtn" onclick="delAttPerm('${k}')">✕</button>
-    </div>`).join('');
-  gId('permEditArea').innerHTML=`
-    <div style="margin-bottom:14px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:9px">密碼設定</div>
-      <div class="pwd-row"><label><span class="pwd-tag tag-host">主持人</span></label><input class="pwd-input" type="password" id="ep-host" value="${p.host||''}" placeholder="留空=不限制"><button class="btn btn-sm" onclick="togglePwd('ep-host')">顯示</button></div>
-      <div class="pwd-row"><label><span class="pwd-tag tag-edit">編輯者</span></label><input class="pwd-input" type="password" id="ep-edit" value="${p.edit||''}" placeholder="留空=不限制"><button class="btn btn-sm" onclick="togglePwd('ep-edit')">顯示</button></div>
-      <div class="pwd-row" style="margin-bottom:10px"><label><span class="pwd-tag tag-view">檢視者</span></label><input class="pwd-input" type="password" id="ep-view" value="${p.view||''}" placeholder="留空=不限制"><button class="btn btn-sm" onclick="togglePwd('ep-view')">顯示</button></div>
-      <button class="btn btn-primary" onclick="savePermPwds()">儲存密碼</button>
     </div>
-    <div style="border-top:1px solid var(--bd);padding-top:12px">
-      <div style="font-size:13px;font-weight:500;margin-bottom:8px">人員名單（依姓名進入）</div>
-      ${Object.keys(m.atts||{}).length===0?'<p style="font-size:13px;color:var(--tx3);margin-bottom:8px">請前往「出席打卡」頁新增人員。</p>':attRows}
-    </div>`;
-}
+    <div class="fg">
+      <label class="fl">想說的類型</label>
+      <select class="fs" id="ct">
+        <option value="工作建議 / 改善意見">工作建議 / 改善意見</option>
+        <option value="獎金相關問題">獎金相關問題</option>
+        <option value="工作困擾 / 壓力">工作困擾 / 壓力</option>
+        <option value="人際關係問題">人際關係問題</option>
+        <option value="職場霸凌 / 不當對待">職場霸凌 / 不當對待</option>
+        <option value="性騷擾申訴">性騷擾申訴</option>
+        <option value="就業歧視">就業歧視</option>
+        <option value="其他想說的話">其他想說的話</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label class="fl">您的姓名（可留空匿名）</label>
+      <input type="text" class="fi" id="cname" placeholder="留空即為匿名"/>
+    </div>
+    <div class="fg">
+      <label class="fl">想說的話 <span style="color:var(--pk)">*</span></label>
+      <textarea class="ft" id="ccontent" placeholder="請放心說出您的想法，這裡是安全的空間…" style="min-height:100px"></textarea>
+    </div>
+    <button class="fb" id="csend" onclick="submitC()">送出 💌</button>
+  </div>
+  <div id="sok" style="display:none;text-align:center;padding:1.5rem;background:#EAFAF1;border:1px solid #A9DFBF;border-radius:10px;color:#1a5c35">
+    <div style="font-size:24px;margin-bottom:8px">💌</div>
+    <div style="font-weight:600;font-size:14px;margin-bottom:6px">信件已成功寄出！</div>
+    <div style="font-size:12px;opacity:.8;margin-bottom:14px">感謝您願意說出心聲，我們會認真看待每一份回饋。</div>
+    <button onclick="document.getElementById('sok').style.display='none';document.getElementById('cf').style.display='block';document.getElementById('csend').textContent='送出 💌';document.getElementById('csend').disabled=false;" style="background:none;border:1px solid #A9DFBF;border-radius:6px;padding:6px 16px;font-size:12px;cursor:pointer;color:#1a5c35">← 再次填寫</button>
+  </div>
+</div>
 
-async function savePermPwds(){
-  const m=cur();if(!m)return;
-  m.pwds={host:(gId('ep-host')||{}).value||'',edit:(gId('ep-edit')||{}).value||'',view:(gId('ep-view')||{}).value||''};
-  await pushMeeting(m);toast('✓ 密碼已儲存並同步');
-}
-async function updAttPerm(k,perm){
-  const m=cur();if(!m||!m.atts[k])return;
-  m.atts[k].perm=perm;await pushMeeting(m);
-}
-async function delAttPerm(k){
-  const m=cur();if(!m)return;
-  const name=(m.atts[k]||{}).name||'?';
-  cfmDialog(`確定移除「${name}」？`,'移除',async()=>{delete m.atts[k];await pushMeeting(m);renderAtts();renderPermEdit(m);});
-}
+<!-- 考核標準 -->
+<div class="sec" id="sec-eval">
+  <div class="stitle">📊 年度考核標準（115年度）</div>
+  <div class="ib bl">每月由主管評分，年終加總計算平均成績作為考核依據。</div>
 
-/* ════════ TABS ════════ */
-function switchTab(el,name){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
-  if(el)el.classList.add('active');
-  else{const map={overview:0,checkin:1,summary:2,todo:3,ai:4,perm:5};const tabs=document.querySelectorAll('.tab');if(tabs[map[name]])tabs[map[name]].classList.add('active');}
-  const tc=gId('tc-'+name);if(tc)tc.classList.add('active');
-}
+  <!-- 電銷 -->
+  <div class="ssub" style="background:var(--pk);color:white;padding:6px 12px;border-radius:6px;margin-bottom:10px">📱 電銷處</div>
 
-/* ════════ ATTENDEES ════════ */
-const avC=['av-a','av-b','av-c','av-d','av-e','av-f'];
-const permLab={host:'主持人',edit:'編輯者',view:'檢視者'};
-const permCls={host:'ap-host',edit:'ap-edit',view:'ap-view'};
+  <div class="ssub">電銷專員</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">業績 KPI</div><div class="val">40%</div></div>
+    <div class="card"><div class="lbl">話術技巧</div><div class="val">15%</div></div>
+    <div class="card"><div class="lbl">培客能力</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">敬業態度＆文書</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">專業</div><div class="val">15%</div></div>
+    <div class="card"><div class="lbl">出缺勤</div><div class="val">10%</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項與占比</th></tr></thead>
+    <tbody>
+      <tr><td>業績 KPI 40%</td><td>業績20%、通時/通數各5%、平均訂單5%、成交率5%</td></tr>
+      <tr><td>話術技巧 15%</td><td>話術評比10%（五架構/搜身/締結）、音檔自我學習5%</td></tr>
+      <tr><td>培客能力 10%</td><td>713回訪率5%、回購客VIP人數5%</td></tr>
+      <tr><td>敬業態度＆文書 10%</td><td>電腦文書/基本職能、歷程備註、上線管理、報表、工作落實、團隊合作、正向態度</td></tr>
+      <tr><td>專業 15%</td><td>電銷考試13%、補考次數2%（逢618/雙11暫停，KPI改35%）</td></tr>
+      <tr><td>出缺勤 10%</td><td>遲到/忘打卡每次-0.5分；病假4H內-0.5/日-1；事假4H內-0.5/日-2；曠職-10</td></tr>
+    </tbody>
+  </table></div>
 
-function renderAtts(){
-  const m=cur();if(!m)return;
-  const atts=Object.entries(m.atts||{});
-  const pres=atts.filter(([,a])=>a.status==='present').length,total=atts.length;
-  gId('checkinCnt').textContent=`（${pres}/${total}）`;
-  gId('tbCheckin').textContent=`${pres}/${total}`;
-  gId('ovPresent').textContent=`${pres}/${total}`;
-  gId('noAtt').style.display=total===0?'block':'none';
-  const ed=canEdit();
-  gId('attGrid').innerHTML=atts.map(([k,a],idx)=>{
-    const cls=a.status==='present'?'present':(a.status==='late'?'late':'');
-    const icon=a.status==='present'?'✓':(a.status==='late'?'⚡':'○');
-    return `<div class="att ${cls} ${ed?'clickable':''}" ${ed?`onclick="toggleAtt('${k}')"`:''}">
-      <div class="av ${avC[idx%6]}">${(a.name||'?')[0]}</div>
-      <div class="att-info"><div class="att-name">${a.name}</div><div class="att-dept">${a.dept||''}</div></div>
-      <span class="att-perm ${permCls[a.perm||'edit']}">${permLab[a.perm||'edit']}</span>
-      <span style="font-size:12px;margin-left:2px">${icon}</span>
-      ${ed?`<button class="xbtn" onclick="event.stopPropagation();delAtt('${k}')">✕</button>`:''}
+  <div class="ssub">KPI 業績評分細表</div>
+  <div class="tw"><table>
+    <thead><tr><th>業績達成率</th><th>得分（滿分20）</th><th>通時+通數（滿分10）</th><th>平均訂單（滿分5）</th><th>成交率（滿分5）</th></tr></thead>
+    <tbody>
+      <tr><td>69%以下</td><td>0–5</td><td rowspan="6" style="vertical-align:middle;text-align:center">59%以下→1<br>60-79%→2<br>80-99%→4<br>100-109%→6<br>110-119%→8<br>120%以上→10</td><td rowspan="6" style="vertical-align:middle;text-align:center">2500↑→1<br>3500↑→2<br>4000↑→3<br>5000↑→4<br>6000↑→5</td><td rowspan="6" style="vertical-align:middle;text-align:center">6-7%→1<br>8-9%→2<br>10-11%→3<br>12-13%→4<br>14%↑→5</td></tr>
+      <tr><td>70–79%</td><td>7</td></tr>
+      <tr><td>80–89%</td><td>10</td></tr>
+      <tr><td>90–99%</td><td>11</td></tr>
+      <tr><td>100–124%</td><td>13</td></tr>
+      <tr><td>125–149%</td><td>15</td></tr>
+      <tr><td>150–174%</td><td>18</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>175–199%</td><td>19</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>200%以上</td><td>20</td><td>—</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">話術組</div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項與占比</th></tr></thead>
+    <tbody>
+      <tr><td>話術評比 10%</td><td>話術引導技巧3%、新人/落後輔導3%、專業修正正確性2%、工作達成準時性2%（每週5通音檔）</td></tr>
+      <tr><td>抽聽音檔 5%</td><td>31-35通→5分；25-30通→4分；20通→3分</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">電銷副理</div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項與占比</th></tr></thead>
+    <tbody>
+      <tr><td>庶務技巧 10%</td><td>事務掌控/早會/活動佈達4%、輔導專員上線能力4%、每日案件清單分析2%</td></tr>
+      <tr><td>抽聽音檔 5%</td><td>12通→5分；10通→4分；8通→3分</td></tr>
+    </tbody>
+  </table></div>
+
+  <!-- 客服 -->
+  <div class="ssub" style="background:var(--pk);color:white;padding:6px 12px;border-radius:6px;margin-top:18px;margin-bottom:10px">🎧 支援客服部</div>
+
+  <div class="ssub">人資組長 莊雯淇</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">人資管理</div><div class="val">20%</div></div>
+    <div class="card"><div class="lbl">客服管理＆基本職能</div><div class="val">30%</div></div>
+    <div class="card"><div class="lbl">敬業態度</div><div class="val">20%</div></div>
+    <div class="card"><div class="lbl">出缺勤</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">主管管理</div><div class="val">20%</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項</th></tr></thead>
+    <tbody>
+      <tr><td>人資管理 20%</td><td>人資庶務10%、名單管理10%（由安琪拉評核）</td></tr>
+      <tr><td>客服管理＆基本職能 30%</td><td>客服電話/文字專業10%、行政能力10%（平台回覆/案件追蹤）、系統應用10%（名單系統/平台搜尋）</td></tr>
+      <tr><td>敬業態度 20%</td><td>團隊合作互助10%、工作落實度10%</td></tr>
+      <tr><td>出缺勤 10%</td><td>依安橋規範出勤評分</td></tr>
+      <tr><td>主管管理 20%</td><td>正向鼓舞10%、團隊管控能力10%</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">財務組長 陳姿吟</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">財務報表專業</div><div class="val">50%</div></div>
+    <div class="card"><div class="lbl">客服管理</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">業務拓展</div><div class="val">5%</div></div>
+    <div class="card"><div class="lbl">敬業態度</div><div class="val">15%</div></div>
+    <div class="card"><div class="lbl">出缺勤</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">主管管理</div><div class="val">10%</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項</th></tr></thead>
+    <tbody>
+      <tr><td>財務報表專業 50%</td><td>各品牌報表良率10%、系統應用10%、行政能力10%、合約追蹤文書10%、報表異議處理10%（由安琪拉評核）</td></tr>
+      <tr><td>客服管理 10%</td><td>客服電話/文字專業、進線/平台庶務支援</td></tr>
+      <tr><td>業務拓展 5%</td><td>特殊專案承接/支援</td></tr>
+      <tr><td>敬業態度 15%</td><td>團隊合作10%、工作落實度5%</td></tr>
+      <tr><td>出缺勤 10%</td><td>依安橋規範出勤評分</td></tr>
+      <tr><td>主管管理 10%</td><td>團隊管控能力5%、應變處理能力5%</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">客服專員A 邱靜怡</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">專業</div><div class="val">15%</div></div>
+    <div class="card"><div class="lbl">業績 KPI</div><div class="val">35%</div></div>
+    <div class="card"><div class="lbl">話術文書＆基本職能</div><div class="val">30%</div></div>
+    <div class="card"><div class="lbl">敬業態度</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">出缺勤</div><div class="val">10%</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項</th></tr></thead>
+    <tbody>
+      <tr><td>專業 15%</td><td>考試成績13%、補考次數2%（逢618/雙11暫停，KPI改35%；由培訓組蔡秋月評核，主軸：藥師健生活）</td></tr>
+      <tr><td>業績 KPI 35%</td><td>業績達成率20%、通數達成率10%、平均客單5%</td></tr>
+      <tr><td>話術文書＆基本職能 30%</td><td>話術技巧/締結10%、平台應對行政能力10%、問題解決系統應用10%</td></tr>
+      <tr><td>敬業態度 10%</td><td>團隊合作10%、工作落實度5%</td></tr>
+      <tr><td>出缺勤 10%</td><td>依安橋規範出勤評分</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tw"><table>
+    <thead><tr><th>業績達成率（20分）</th><th>得分</th><th>通數達成率（10分）</th><th>得分</th><th>平均客單（5分）</th><th>得分</th></tr></thead>
+    <tbody>
+      <tr><td>0–19%</td><td>1</td><td>0–29%</td><td>1</td><td>3000以上</td><td>1</td></tr>
+      <tr><td>20–50%</td><td>5</td><td>90–100%</td><td>10</td><td>3500以上</td><td>2</td></tr>
+      <tr><td>51–60%</td><td>10</td><td>—</td><td>—</td><td>4000以上</td><td>3</td></tr>
+      <tr><td>91–99%</td><td>13</td><td>—</td><td>—</td><td>4500以上</td><td>4</td></tr>
+      <tr><td>100%</td><td>14</td><td>—</td><td>—</td><td>5000以上</td><td>5</td></tr>
+      <tr><td>101–130%</td><td>15–17</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>131–150%</td><td>18–19</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>超過150%</td><td>20</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">客服專員B 吳秀燕</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">專業</div><div class="val">10%</div></div>
+    <div class="card"><div class="lbl">客服行政/業務拓展</div><div class="val">60%</div></div>
+    <div class="card"><div class="lbl">敬業態度</div><div class="val">20%</div></div>
+    <div class="card"><div class="lbl">出缺勤</div><div class="val">10%</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項</th></tr></thead>
+    <tbody>
+      <tr><td>專業 10%</td><td>考試成績8%、補考次數2%（由培訓組蔡秋月評核，主軸：BFFECT）</td></tr>
+      <tr><td>客服行政/業務拓展 60%</td><td>客服電話/文字專業20%、問題解決系統應用15%、交辦事務效率10%、行政處理細心度10%、特殊專案支援10%</td></tr>
+      <tr><td>敬業態度 20%</td><td>團隊合作/互助10%、工作落實度10%</td></tr>
+      <tr><td>出缺勤 10%</td><td>依安橋規範出勤評分</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">行政專員 洪淑秋</div>
+  <div class="cg">
+    <div class="card"><div class="lbl">行政文書＆基本職能</div><div class="val">55%</div></div>
+    <div class="card"><div class="lbl">敬業態度</div><div class="val">35%</div></div>
+    <div class="card"><div class="lbl">出缺勤</div><div class="val">10%</div></div>
+  </div>
+  <div class="tw"><table>
+    <thead><tr><th>考核類別</th><th>細項</th></tr></thead>
+    <tbody>
+      <tr><td>行政文書＆基本職能 55%</td><td>業務執行力10%、系統應用10%、交辦事務效率15%、異議處理10%、機動支援/職能擴充10%</td></tr>
+      <tr><td>敬業態度 35%</td><td>團隊合作10%、資源控管10%、跨部門溝通5%、工作落實度10%</td></tr>
+      <tr><td>出缺勤 10%</td><td>依安橋規範出勤評分</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ib yw">📌 如有疑問請洽人資組長莊雯淇。</div>
+</div>
+<!-- 獎金制度 -->
+<div class="sec" id="sec-bonus">
+  <div class="stitle">💰 獎金制度（2026年1月起適用）</div>
+  <div class="ib bl">適用對象：全職客電銷專員與管理主管（獎金表一～八）。特約電銷人員依獎金表九計算。</div>
+
+  <div class="ssub">一、月業績獎金（個人）</div>
+  <div class="ib yw">條件：業績達成率 80% 以上＋通時達成率 100%＋通數達成率 100%</div>
+  <div class="tw"><table>
+    <thead><tr><th>業績達成率</th><th>獎金抽成（IP）</th></tr></thead>
+    <tbody>
+      <tr><td>80%</td><td>2.50%</td></tr>
+      <tr><td>90%</td><td>3.00%</td></tr>
+      <tr><td>100%</td><td>4.00%</td></tr>
+      <tr><td>125%</td><td>4.50%</td></tr>
+      <tr><td>150%</td><td>5.00%</td></tr>
+      <tr><td>175%</td><td>7.00%</td></tr>
+      <tr><td>200%</td><td>8.00%</td></tr>
+      <tr><td>300%</td><td>9.00%</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">二、月品牌達標獎金（個人）</div>
+  <div class="tw"><table>
+    <thead><tr><th>達成率</th><th>2 品牌</th><th>3 品牌</th><th>4 品牌</th></tr></thead>
+    <tbody>
+      <tr><td>100%</td><td>NT$1,000</td><td>NT$2,000</td><td>NT$5,000</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">三、月萬元單獎金（大單王）</div>
+  <div class="tw"><table>
+    <thead><tr><th>單筆訂單金額</th><th>每單加發</th><th>當月累計 5 單再加</th><th>當月累計 10 單再加</th></tr></thead>
+    <tbody>
+      <tr><td>NT$10,000 以上</td><td>$100</td><td>—</td><td>—</td></tr>
+      <tr><td>NT$20,000 以上</td><td>$200</td><td>$1,000</td><td>$2,000</td></tr>
+      <tr><td>NT$30,000 以上</td><td>$500</td><td>$1,500</td><td>$3,000</td></tr>
+      <tr><td>NT$50,000 以上</td><td>$1,000</td><td>$5,000</td><td>$10,000</td></tr>
+      <tr><td>NT$100,000 以上</td><td>$3,000</td><td>$15,000</td><td>$30,000</td></tr>
+    </tbody>
+  </table></div>
+  <div class="ib yw">※ 單筆達萬元以上依階另加發，月結算。累計 5 單與 10 單取其高，不累計加發。惡意拆單不列入並取消資格。</div>
+
+  <div class="ssub">四、季個人達標獎金</div>
+  <div class="ib">每季（3/6/9/12月）結算，次月發放。三個月加總達成率 100% 以上依階加發。</div>
+  <div class="tw"><table>
+    <thead><tr><th>達標條件</th><th>獎金</th></tr></thead>
+    <tbody>
+      <tr><td>達標 100% 以上</td><td>NT$3,000</td></tr>
+      <tr><td>超標 125% 以上</td><td>NT$5,000</td></tr>
+      <tr><td>超標 150% 以上</td><td>NT$10,000</td></tr>
+      <tr><td>超標 175% 以上</td><td>NT$15,000</td></tr>
+      <tr><td>超標 200% 以上</td><td>NT$20,000</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">五、季團隊達標獎金（聚餐獎金）</div>
+  <div class="tw"><table>
+    <thead><tr><th>團隊業績達成率（季）</th><th>聚餐獎金（每人）</th></tr></thead>
+    <tbody>
+      <tr><td>100%</td><td>NT$500</td></tr>
+      <tr><td>125%</td><td>NT$800</td></tr>
+      <tr><td>150%</td><td>NT$1,200</td></tr>
+      <tr><td>175%</td><td>NT$2,000</td></tr>
+      <tr><td>200%</td><td>NT$3,000</td></tr>
+    </tbody>
+  </table></div>
+  <div class="ib yw">※ 須實際有團聚行為，季結算後 2 個月內憑發票（標統編）申請。依達標階計算，不得超過每人額度上限。統一由主管代墊後向公司申請費用。</div>
+
+  <div class="ssub">六、新人王獎金（到職首年）</div>
+  <div class="ib">前 6 個月業績平均達 100% 以上額外加發，後 6 個月再達標再加發。</div>
+  <div class="tw"><table>
+    <thead><tr><th>時間</th><th>達成 100%</th><th>達成 150%</th><th>達成 200%</th></tr></thead>
+    <tbody>
+      <tr><td>M1–M6（前6個月平均）</td><td>NT$6,000</td><td>NT$10,000</td><td>NT$15,000</td></tr>
+      <tr><td>M7–M12（後6個月平均）</td><td>NT$8,000</td><td>NT$12,000</td><td>NT$20,000</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="ssub">七、年度分紅獎勵（計算期間：115/2 ～ 116/1）</div>
+  <div class="ib yw">條件：通時達成率 80% 以上＋通數達成率 80% 以上。退貨與取消訂單不列入。</div>
+  <div class="tw"><table>
+    <thead><tr><th>階數</th><th>年度個人總業績</th><th>分紅獎金%</th></tr></thead>
+    <tbody>
+      <tr><td>第一階</td><td>NT$4,000,000</td><td>0.3%</td></tr>
+      <tr><td>第二階</td><td>NT$5,000,000</td><td>0.8%</td></tr>
+      <tr><td>第三階</td><td>NT$6,000,000</td><td>1.5%</td></tr>
+      <tr><td>第四階</td><td>NT$7,000,000</td><td>1.8%</td></tr>
+      <tr><td>第五階</td><td>NT$8,000,000</td><td>2.0%</td></tr>
+      <tr><td>第六階</td><td>NT$10,000,000</td><td>3.0%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="ib yw">※ 結算與獎金發放前離職視同放棄資格。獎金走簽呈依公告日發放。</div>
+</div>
+
+
+</div><!-- ip -->
+
+<!-- Chat -->
+<div class="cp">
+  <div class="ch"><div class="cht">🤖 HR AI 助理</div><div class="chs"><span class="dg"></span>即時回答・自動引導頁籤</div></div>
+  <button class="scroll-btn" id="scroll-btn" onclick="scrollToBottom()" title="滾到最新訊息">↓</button>
+  <div class="cm" id="cm">
+    <div class="msg ai"><div class="mav a">HR</div><div><div class="ml">HR 助理</div><div class="bub">您好！有任何人資問題直接問我，我會回答並帶您到對應頁面 👋</div></div></div>
+    <div class="tr2" id="tw" style="display:none"><div class="mav a">HR</div><div class="dots"><span></span><span></span><span></span></div></div>
+  </div>
+  <div class="qa">
+    <button class="qc" onclick="qa('特休假有幾天？')">特休幾天？</button>
+    <button class="qc" onclick="qa('員購金怎麼用？')">員購金？</button>
+    <button class="qc" onclick="qa('請病假要附什麼？')">病假文件？</button>
+    <button class="qc" onclick="qa('結婚津貼多少？')">結婚津貼？</button>
+    <button class="qc" onclick="qa('申訴管道有哪些？')">申訴管道？</button>
+  </div>
+  <div class="ir">
+    <textarea id="ci" placeholder="輸入問題…" rows="1" onkeydown="hk(event)" oninput="ag(this)"></textarea>
+    <button id="sb" onclick="send()"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 2L9 14L7.5 9L2 8Z" fill="white"/></svg></button>
+  </div>
+</div>
+</div>
+</div>
+<div class="footer">安橋股份有限公司 人資部｜申訴專線：0979-132-080｜信箱：opinion@marxbiotech.com</div>
+<script>
+// API Key 從 localStorage 讀取（不寫死在程式碼裡）
+let KEY = localStorage.getItem('anb_api_key') || '';
+
+// 頁面載入時檢查是否有 Key
+window.addEventListener('DOMContentLoaded', function(){
+  if(!KEY){
+    const k = prompt('請輸入 API Key 以啟用 AI 助理（向人資取得）：');
+    if(k && k.startsWith('sk-ant-')){
+      KEY = k;
+      localStorage.setItem('anb_api_key', k);
+    }
+  }
+});
+const TL={notice:'公告欄',cal:'行事曆',welfare:'員工福利',leave:'請假與出勤',org:'組織架構',clock:'打卡系統',complaint:'我有話想說',eval:'考核標準',bonus:'獎金制度'};
+const TI=['notice','cal','welfare','leave','eval','bonus','org','onboard','clock','complaint'];
+const SYS=`你是安橋股份有限公司HR智能助理。繁體中文，語氣亲切，100字內，必要時條列。絕對不顯示任何電話號碼或信笱地址。最後一行輸出：[TAB:xxx]，xxx選：notice/welfare/leave/eval/bonus/org/onboard/clock/complaint。
+公司：安橋股份有限公司，統編90374325
+上班：早班09-18、晚班10-19，午休1小時，遲到請1小時事假，08:30後才可打卡須在辦公室
+打卡：鼎新電腦+Line官方帳號連動工號。加班：滿9小時佑5切分後算
+特休：滿半年3天、1年7天、2年10天、3-4年14天、5-9年15天、10年以上每年加1天最高30天
+假別：事假（年不超14日無薪）；病假（30天折半薪，31天起無薪）；婚假日；產假564天；降產假天；育嬲假滿半年可申請
+請假：Line官方帳號或Easy Flow，以小時為單位
+福利：員購金月5003築8001生日1000；礼金3築1000生日1000；運動津貼每月5001；生育2000；結娘3600；喪葬2500（直系親屬與配偶）
+獎金（2026年1月起）：①月業績達80%抽2.5%～300%抽9%（需通時通數100%）；②品牌達標2品1000/3品2000/4品5000；③大單王：單筆萬元以上每單加發$100起；④季個人達100%加$3000，超標最高$20000；⑤季團隊聚餐達100%每人$500起；⑥新人王M1-6達100%加$6000/M7-12加$8000；⑦年度分紅：業績達400萬抽0.3%，最高1000萬抽3%（通時通數需80%以上）
+獎金問題：請詢問財務組長陳姿吟，使用「我有話想說」功能聯繫。[TAB:complaint]
+人資問題：請詢問人資組長莊雯淋，使用「我有話想說」功能聯繫。[TAB:complaint]
+其他問題：建議使用「我有話想說」功能聯繫相關主管。[TAB:complaint]`;
+let busy=false;
+const CM=document.getElementById('cm');
+const TW=document.getElementById('tw');
+const SCROLL_BTN=document.getElementById('scroll-btn');
+
+function scrollToBottom(){CM.scrollTop=CM.scrollHeight;}
+CM.addEventListener('scroll',function(){
+  const distFromBottom=CM.scrollHeight-CM.scrollTop-CM.clientHeight;
+  if(distFromBottom>80){SCROLL_BTN.classList.add('show');}
+  else{SCROLL_BTN.classList.remove('show');}
+});
+let notices=JSON.parse(localStorage.getItem('anb_n')||'[]');
+function saveN(){localStorage.setItem('anb_n',JSON.stringify(notices))}
+function renderN(){
+  const d = getCheckinData();
+  const myName = getMyName();
+  const dynNotices = notices.map((n,i) => ({id:'n'+i, t:n.t, date:n.d, pin:false, dynIdx:i}));
+  const all = [...dynNotices];
+
+  if(all.length === 0){
+    document.getElementById('nl').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3);font-size:13px">目前尚無公告</div>';
+    return;
+  }
+  document.getElementById('nl').innerHTML = all.map(item => {
+    const readers = d[item.id] || [];
+    const alreadyRead = myName && readers.includes(myName);
+    const readersHtml = readers.length > 0
+      ? readers.map(name => `<div class="reader-chip"><span style="width:16px;height:16px;border-radius:50%;background:var(--pk);color:white;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;margin-right:3px">${name.slice(0,1)}</span>${name}</div>`).join('')
+      : '';
+    const delBtn = item.dynIdx !== undefined ? `<span class="ndel" onclick="delN(${item.dynIdx})">✕ 刪除</span>` : '';
+    const pinBadge = item.pin ? `<span class="npin">置頂</span>` : '';
+    return `<div class="ni">
+      <div class="nd"></div>
+      <div class="nc">
+        <div class="nt">${item.t}${pinBadge}</div>
+        <div class="nm">人資部 · ${item.date} ${delBtn}</div>
+        <div class="checkin-row">
+          <button class="checkin-btn${alreadyRead?' done':''}" ${alreadyRead?'disabled':''} onclick="handleCheckin('${item.id}')">
+            ${alreadyRead?'已確認 ✓':'我已讀 ✓'}
+          </button>
+          <span style="font-size:11px;color:var(--text2)">已有 <strong>${readers.length}</strong> 位同仁確認</span>
+          ${readers.length > 0 ? `<span style="font-size:11px;color:var(--pk);cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='flex'?'none':'flex'">查看名單 ▾</span><div class="readers-wrap" style="display:none;width:100%">${readersHtml}</div>` : ''}
+        </div>
+      </div>
     </div>`;
   }).join('');
-  renderLog();
 }
-async function toggleAtt(k){
-  if(!canEdit())return;
-  const m=cur();if(!m||!m.atts[k])return;
-  const a=m.atts[k];
-  const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
-  const c={'':{n:'present',l:'簽到'},'present':{n:'late',l:'遲到'},'late':{n:'absent',l:'請假'},'absent':{n:'',l:'取消'}}[a.status||''];
-  a.status=c.n;
-  if(c.n){if(!m.logs)m.logs=[];m.logs.push({name:a.name,action:c.l,time:t});}
-  await pushMeeting(m);renderAtts();
+function addNotice(){const v=document.getElementById('ni').value.trim();if(!v)return;const d=new Date();const ds=d.getFullYear()+'/'+(d.getMonth()+1+'').padStart(2,'0')+'/'+(''+d.getDate()).padStart(2,'0');notices.unshift({t:v,d:ds});saveN();renderN();document.getElementById('ni').value='';document.getElementById('ni').focus();}
+function delN(i){if(confirm('確定刪除？')){notices.splice(i,1);saveN();renderN();}}
+renderN();
+function submitC(){
+  var to=document.getElementById('cto').value;
+  var cont=document.getElementById('ccontent').value.trim();
+  if(!to||!cont){alert('請選擇收件對象並填寫內容');return;}
+  var name=document.getElementById('cname').value.trim()||'匿名同仁';
+  var type=document.getElementById('ct').value||'一般反映';
+  var btn=document.getElementById('csend');
+  btn.textContent='寄送中…';btn.disabled=true;
+  fetch('https://formspree.io/f/xyklrogg',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify({
+      _subject:'【員工心聲】'+type+' - 收件：'+to,
+      收件對象:to,
+      寄件者:name,
+      類型:type,
+      內容:cont
+    })
+  }).then(function(r){
+    if(r.ok){
+      document.getElementById('cf').style.display='none';
+      document.getElementById('sok').style.display='block';
+    } else {
+      throw new Error('failed');
+    }
+  }).catch(function(){
+    alert('寄送失敗，請稍後再試或直接寄信至 cchuang@anb-tw.com');
+    btn.textContent='產生信件內容 💌';btn.disabled=false;
+  });
 }
-function renderLog(){
-  const m=cur();if(!m)return;
-  const logs=(m.logs||[]).slice().reverse().slice(0,12);
-  const el=gId('logList');
-  if(!logs.length){el.textContent='尚無記錄';return;}
-  el.innerHTML=logs.map(l=>`<div style="display:flex;gap:12px;padding:5px 0;border-bottom:1px solid var(--bd);font-size:13px"><span style="color:var(--tx3)">${l.time}</span><span style="font-weight:500">${l.name}</span><span style="color:var(--tx3)">${l.action}</span></div>`).join('');
-}
-async function addAttendee(){
-  const m=cur();if(!m)return;
-  const name=(gId('att-name').value||'').trim();if(!name){toast('請填寫姓名');return;}
-  if(!m.atts)m.atts={};
-  m.atts['att_'+Date.now()]={name,dept:gv('att-dept'),email:gv('att-email'),perm:gv('att-perm'),status:''};
-  await pushMeeting(m);
-  closeModal('attModal');
-  ['att-name','att-dept','att-email'].forEach(id=>{const el=gId(id);if(el)el.value='';});
-  renderAtts();if(canHost())renderPermEdit(m);toast('✓ 已新增並同步');
-}
-async function delAtt(k){
-  const m=cur();if(!m)return;
-  cfmDialog(`確定移除「${(m.atts[k]||{}).name}」？`,'移除',async()=>{delete m.atts[k];await pushMeeting(m);renderAtts();});
-}
-async function checkAll(){
-  const m=cur();if(!m||!canEdit())return;
-  const t=new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'});
-  if(!m.logs)m.logs=[];
-  Object.entries(m.atts||{}).forEach(([k,a])=>{if(a.status!=='present'){m.logs.push({name:a.name,action:'簽到',time:t});a.status='present';}});
-  await pushMeeting(m);renderAtts();
-}
-async function clearLog(){
-  const m=cur();if(!m)return;
-  cfmDialog('確定清除打卡記錄？','清除',async()=>{m.logs=[];await pushMeeting(m);renderLog();});
-}
-
-/* ════════ DECISIONS ════════ */
-function renderDecs(){
-  const m=cur();if(!m)return;
-  const decs=Object.entries(m.decs||{});
-  const cm={product:'產品',tech:'技術',process:'流程',other:'其他'};
-  gId('noDec').style.display=decs.length===0?'block':'none';
-  gId('ovDec').textContent=decs.length;
-  const ed=canEdit();
-  gId('decList').innerHTML=decs.map(([k,d])=>`<div class="item"><div class="dot dot-p"></div><div class="ibody"><div class="itext">${d.text}</div><div class="imeta"><span class="pill">${cm[d.cat]||d.cat}</span>${d.owner?`<span class="pill">${d.owner}</span>`:''}</div></div>${ed?`<button class="xbtn" onclick="delDec('${k}')">✕</button>`:''}</div>`).join('');
-}
-async function addDec(){
-  const m=cur();if(!m||!canEdit())return;
-  const t=(gv('decTxt')||'').trim();if(!t)return;
-  if(!m.decs)m.decs={};
-  m.decs['dec_'+Date.now()]={text:t,owner:gv('decOwner'),cat:gv('decCat')};
-  gId('decTxt').value='';gId('decOwner').value='';
-  await pushMeeting(m);renderDecs();
-}
-async function delDec(k){const m=cur();if(!m)return;delete m.decs[k];await pushMeeting(m);renderDecs();}
-async function clearSum(){const m=cur();if(!m)return;cfmDialog('確定清除摘要？','清除',async()=>{m.summary='';gId('sumBox').innerText='';await pushMeeting(m);});}
-
-/* ════════ TODOS ════════ */
-function renderTodos(){
-  const m=cur();if(!m)return;
-  let todos=Object.entries(m.todos||{});
-  const allPend=todos.filter(([,t])=>!t.done).length;
-  if(todoFilter==='pending')todos=todos.filter(([,t])=>!t.done);
-  else if(todoFilter==='done')todos=todos.filter(([,t])=>t.done);
-  else if(todoFilter==='urgent')todos=todos.filter(([,t])=>t.urgent&&!t.done);
-  gId('ovTodo').textContent=allPend;gId('tbTodo').textContent=allPend;
-  gId('todoTotal').textContent=Object.keys(m.todos||{}).length;gId('todoPend').textContent=allPend;
-  gId('noTodo').style.display=todos.length===0?'block':'none';
-  const ed=canEdit();
-  gId('todoList').innerHTML=todos.map(([k,t])=>`<div class="item ${t.done?'done':''}">
-    <div class="chk ${t.done?'on':''} ${!ed?'disabled':''}" ${ed?`onclick="togTodo('${k}')"`:''}>${t.done?'✓':''}</div>
-    <div class="ibody"><div class="itext ${t.done?'struck':''}">${t.text}</div>
-    <div class="imeta">${t.owner?`<span class="pill">@${t.owner}</span>`:''} ${t.due?`<span class="pill">截止 ${t.due}</span>`:''} ${t.urgent&&!t.done?'<span class="pill pill-red">緊急</span>':''}</div></div>
-    ${ed?`<button class="xbtn" onclick="delTodo('${k}')">✕</button>`:''}</div>`).join('');
-  renderOvTodo();
-}
-function renderOvTodo(){
-  const m=cur();if(!m)return;
-  const items=Object.values(m.todos||{}).filter(t=>!t.done).slice(0,4);
-  const el=gId('ovTodoList');
-  if(!items.length){el.innerHTML='<p style="font-size:13px;color:var(--tx3)">尚無待辦</p>';return;}
-  el.innerHTML=items.map(t=>`<div class="item"><div class="dot dot-t"></div><div class="ibody"><div class="itext">${t.text}</div><div class="imeta">${t.owner?`<span class="pill">@${t.owner}</span>`:''} ${t.due?`<span class="pill">截止 ${t.due}</span>`:''} ${t.urgent?'<span class="pill pill-red">緊急</span>':''}</div></div></div>`).join('');
-}
-async function addTodo(){
-  const m=cur();if(!m||!canEdit())return;
-  const t=(gv('todoTxt')||'').trim();if(!t)return;
-  if(!m.todos)m.todos={};
-  m.todos['todo_'+Date.now()]={text:t,owner:gv('todoOwner'),due:gv('todoDue'),urgent:gv('todoUrgent')==='1',done:false};
-  gId('todoTxt').value='';gId('todoOwner').value='';gId('todoDue').value='';
-  await pushMeeting(m);renderTodos();
-}
-async function togTodo(k){const m=cur();if(!m)return;m.todos[k].done=!m.todos[k].done;await pushMeeting(m);renderTodos();}
-async function delTodo(k){const m=cur();if(!m)return;delete m.todos[k];await pushMeeting(m);renderTodos();}
-async function clearDone(){const m=cur();if(!m)return;cfmDialog('確定清除已完成？','清除',async()=>{Object.keys(m.todos||{}).forEach(k=>{if(m.todos[k].done)delete m.todos[k];});await pushMeeting(m);renderTodos();});}
-function ftTodo(el,f){todoFilter=f;document.querySelectorAll('.tag').forEach(t=>t.classList.remove('on'));el.classList.add('on');renderTodos();}
-
-/* ════════ DELETE MEETING ════════ */
-async function delMeeting(){
-  const m=cur();if(!m)return;
-  cfmDialog(`確定刪除「${m.info.title}」？所有人都將看不到，且無法復原。`,'刪除',async()=>{
-    await removeMeeting(m.id);
-    curId=null;curPerm=null;
-    gId('emptyState').style.display='flex';
-    gId('mtgView').style.display='none';
-    gId('lockedState').style.display='none';
-    gId('emptyTitle').textContent='尚無會議記錄';
-    gId('emptyDesc').textContent='點擊左側「＋ 新增會議」建立第一場會議';
-    toast('✓ 會議已刪除');
+function copyMail(){
+  var text=document.getElementById('sok-preview-content').textContent;
+  navigator.clipboard.writeText(text).then(function(){
+    var btn=document.getElementById('copy-btn');
+    btn.textContent='✅ 已複製！';btn.style.background='#16a34a';
+    setTimeout(function(){btn.textContent='📋 複製信件內容';btn.style.background='var(--pk)';},2000);
+  }).catch(function(){
+    var ta=document.createElement('textarea');
+    ta.value=text;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    var btn=document.getElementById('copy-btn');
+    btn.textContent='✅ 已複製！';btn.style.background='#16a34a';
+    setTimeout(function(){btn.textContent='📋 複製信件內容';btn.style.background='var(--pk)';},2000);
   });
 }
 
-/* ════════ AI ════════ */
-async function fillAI(){
-  const m=cur();if(!m)return;
-  const raw=(gId('aiInput').value||'').trim();if(!raw)return;
-  let parsed;
-  try{const cl=raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();parsed=JSON.parse(cl.match(/\{[\s\S]*\}/)?.[0]||cl);}
-  catch(e){toast('❌ JSON 格式錯誤');return;}
-  if(parsed.summary){m.summary=parsed.summary;gId('sumBox').innerText=parsed.summary;}
-  if(!m.decs)m.decs={};if(!m.todos)m.todos={};
-  let dc=0,tc=0;
-  (parsed.decisions||[]).forEach(d=>{if(d?.text){m.decs['dec_'+Date.now()+'_'+dc]={text:d.text,owner:d.owner||'',cat:d.cat||'other'};dc++;}});
-  (parsed.todos||[]).forEach(t=>{if(t?.text){m.todos['todo_'+Date.now()+'_'+tc]={text:t.text,owner:t.owner||'',due:t.due||'',urgent:!!t.urgent,done:false};tc++;}});
-  await pushMeeting(m);renderMeeting();
-  gId('fillRes').style.display='block';
-  gId('fillRes').innerHTML=`<div class="alert alert-ok">✦ 填入並同步完成！決策 ${dc} 項 · 待辦 ${tc} 項</div>`;
-  toast('✓ 已填入並同步到雲端！');setTimeout(()=>switchTab(null,'summary'),1200);
+function updateRecipient(){}
+function showTab(id,btn){document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));document.getElementById('sec-'+id).classList.add('on');const i=TI.indexOf(id);if(btn)btn.classList.add('on');else if(i>=0)document.querySelectorAll('.tb')[i].classList.add('on');if(id==='cal')setTimeout(renderCal,50);}
+function flashTab(id){const i=TI.indexOf(id);if(i<0)return;const b=document.querySelectorAll('.tb')[i];b.classList.remove('flash');void b.offsetWidth;b.classList.add('flash');}
+function toggleAcc(h){h.nextElementSibling.classList.toggle('open');h.querySelector('.cv').classList.toggle('open');}
+function ag(el){el.style.height='32px';el.style.height=Math.min(el.scrollHeight,80)+'px';}
+function hk(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();}}
+function qa(q){document.getElementById('ci').value=q;send();}
+function addB(role,text,tabId){const isAI=role==='ai';const w=document.createElement('div');w.className='msg '+role;const av=document.createElement('div');av.className='mav '+(isAI?'a':'u');av.textContent=isAI?'HR':'我';const inn=document.createElement('div');const lb=document.createElement('div');lb.className='ml';lb.textContent=isAI?'HR 助理':'您';const b=document.createElement('div');b.className='bub';b.innerHTML=text.replace(/\n/g,'<br>');inn.appendChild(lb);inn.appendChild(b);if(isAI&&tabId){const h=document.createElement('button');h.className='nh';h.textContent='→ 查看「'+(TL[tabId]||tabId)+'」完整內容';h.onclick=()=>{showTab(tabId);flashTab(tabId);};inn.appendChild(h);}w.appendChild(av);w.appendChild(inn);CM.insertBefore(w,TW);CM.scrollTop=CM.scrollHeight;}
+async function send(){if(busy)return;const inp=document.getElementById('ci');const q=inp.value.trim();if(!q)return;inp.value='';inp.style.height='32px';document.getElementById('sb').disabled=true;busy=true;addB('user',q);TW.style.display='flex';CM.scrollTop=CM.scrollHeight;
+try{const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':KEY,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:1000,system:SYS,messages:[{role:'user',content:q}]})});
+const d=await r.json();if(d.error)throw new Error(d.error.message);let raw=d.content?.map(c=>c.text||'').join('')||'抱歉，暫時無法回覆。';const tm=raw.match(/\[TAB:(\w+)\]/);const tid=tm?tm[1]:null;const clean=raw.replace(/\[TAB:\w+\]/g,'').trim();TW.style.display='none';addB('ai',clean,tid);CM.scrollTop=CM.scrollHeight;if(tid){showTab(tid);flashTab(tid);}}catch(e){TW.style.display='none';addB('ai','連線發生問題，請稍後再試，或使用「我有話想說」聯繫人資組長莊雯淇。');}
+busy=false;document.getElementById('sb').disabled=false;}
+
+// ============================================================
+// 已讀簽到功能
+// ============================================================
+let currentNoticeId = null;
+
+function getCheckinData(){
+  try{ return JSON.parse(localStorage.getItem('anb_checkin')||'{}'); }
+  catch(e){ return {}; }
+}
+function saveCheckinData(d){ localStorage.setItem('anb_checkin', JSON.stringify(d)); }
+function getMyName(){ return localStorage.getItem('anb_my_name')||''; }
+
+function handleCheckin(id){
+  currentNoticeId = id;
+  const myName = getMyName();
+  if(myName){ doCheckin(myName, id); }
+  else {
+    document.getElementById('nm-overlay').classList.add('open');
+    setTimeout(()=>document.getElementById('nm-input').focus(), 100);
+  }
 }
 
-/* ════════ EXPORT TXT ════════ */
-function exportTxt(){
-  const m=cur();if(!m)return;
-  const i=m.info;
-  const lines=[`【會議記錄】${i.title}`,`日期：${i.date||'—'} | 主持：${i.host||'—'} | 地點：${i.location||'—'}`,'','═══ 出席 ═══',...Object.values(m.atts||{}).map(a=>`${a.status==='present'?'✓':'○'} ${a.name}（${a.dept||'—'}）`),'','═══ 摘要 ═══',m.summary||'—','','═══ 決策 ═══',...Object.values(m.decs||{}).map((d,n)=>`${n+1}. ${d.text}（${d.owner||'—'}）`),'','═══ 待辦 ═══',...Object.values(m.todos||{}).map((t,n)=>`${n+1}. [${t.done?'✓':'○'}]${t.urgent?'【緊急】':''} ${t.text} @${t.owner||'—'} 截止${t.due||'—'}`)];
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'}));a.download='會議記錄_'+(i.date||'draft')+'.txt';a.click();
+function doCheckin(name, id){
+  const d = getCheckinData();
+  if(!d[id]) d[id] = [];
+  if(!d[id].includes(name)) d[id].push(name);
+  saveCheckinData(d);
+  localStorage.setItem('anb_my_name', name);
+  closeNmModal();
+  renderN();
 }
 
-/* ════════ MODAL / CONFIRM ════════ */
-function openModal(id){const el=gId(id);if(el)el.classList.add('open');}
-function closeModal(id){const el=gId(id);if(el)el.classList.remove('open');}
-function cfmDialog(msg,label,cb){gId('confirmMsg').textContent=msg;gId('confirmOkBtn').textContent=label||'確定';window._cfRes=cb;window._cfRej=null;openModal('confirmModal');}
-function togglePwd(id){const el=gId(id);if(el)el.type=el.type==='password'?'text':'password';}
-function toast(msg){const el=gId('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2800);}
+function confirmCheckin(){
+  const name = document.getElementById('nm-input').value.trim();
+  if(!name){ alert('請輸入姓名'); return; }
+  doCheckin(name, currentNoticeId);
+}
+function closeNmModal(){
+  document.getElementById('nm-overlay').classList.remove('open');
+  document.getElementById('nm-input').value = '';
+  currentNoticeId = null;
+}
 
-gId('sumBox').addEventListener('blur',async()=>{const m=cur();if(m&&canEdit()&&gId('sumBox').innerText.trim()!==m.summary){m.summary=gId('sumBox').innerText.trim();await pushMeeting(m);}});
+// ============================================================
+// 行事曆功能
+// ============================================================
+const CAL_MONTHS = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+const CAL_MNAMES = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const EV_LABEL = {eval:'考核',meeting:'會議',other:'其他'};
 
-init();
+let calToday = new Date();
+let calYear = calToday.getFullYear();
+let calMonth = calToday.getMonth();
+
+function loadCalEvents(){
+  try{ return JSON.parse(localStorage.getItem('anb_cal')||'[]'); }
+  catch(e){ return []; }
+}
+function saveCalEvents(evs){ localStorage.setItem('anb_cal', JSON.stringify(evs)); }
+
+// 清除所有預設活動
+if(localStorage.getItem('anb_cal_ver') !== '3'){
+  localStorage.removeItem('anb_cal');
+  localStorage.setItem('anb_cal_ver','3');
+}
+
+let calEvents = loadCalEvents();
+if(calEvents.length === 0){
+  saveCalEvents(calEvents);
+}
+
+function renderCal(){
+  const titleEl = document.getElementById('cal-title');
+  if(!titleEl) return;
+  titleEl.textContent = calYear + ' 年 ' + CAL_MONTHS[calMonth];
+  const grid = document.getElementById('cal-grid');
+  if(!grid) return;
+  const days = ['日','一','二','三','四','五','六'];
+  let html = days.map(d => `<div class="cal-day-hdr">${d}</div>`).join('');
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const daysInPrev = new Date(calYear, calMonth, 0).getDate();
+  const todayStr = calToday.toISOString().slice(0,10);
+  for(let i=0;i<firstDay;i++){
+    const d = daysInPrev - firstDay + 1 + i;
+    html += makeCellHtml(d, calMonth-1, calYear, true, todayStr);
+  }
+  for(let d=1;d<=daysInMonth;d++){
+    html += makeCellHtml(d, calMonth, calYear, false, todayStr);
+  }
+  const total = firstDay + daysInMonth;
+  const rem = total%7===0?0:7-(total%7);
+  for(let d=1;d<=rem;d++){
+    html += makeCellHtml(d, calMonth+1, calYear, true, todayStr);
+  }
+  grid.innerHTML = html;
+  renderUpcoming();
+}
+
+function makeCellHtml(day, month, year, otherM, todayStr){
+  const rm = ((month%12)+12)%12;
+  const ry = year + Math.floor(month/12);
+  const dateStr = ry+'-'+String(rm+1).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  const isToday = dateStr === todayStr;
+  const cls = 'cal-cell'+(otherM?' other-m':'')+(isToday?' today-c':'');
+  const dayEvs = calEvents.filter(e => e.date === dateStr);
+  let evHtml = dayEvs.slice(0,2).map(ev =>
+    `<div class="ev-dot ev-${ev.type}" title="${ev.title}">${ev.title}</div>`
+  ).join('');
+  if(dayEvs.length>2) evHtml += `<div style="font-size:10px;color:var(--text3)">+${dayEvs.length-2}</div>`;
+  return `<div class="${cls}"><div class="cal-dn">${day}</div>${evHtml}</div>`;
+}
+
+function renderUpcoming(){
+  var el = document.getElementById('upcoming-list');
+  if(!el) return;
+  var todayStr = calToday.toISOString().slice(0,10);
+  var ups = calEvents.filter(function(e){return e.date>=todayStr;}).sort(function(a,b){return a.date.localeCompare(b.date);}).slice(0,8);
+  if(!ups.length){
+    el.innerHTML='<div style="font-size:12px;color:var(--text3);padding:8px 0">近期無活動</div>';
+    return;
+  }
+  var clsMap = {eval:'tg',meeting:'tb2',other:'tr'};
+  var html = ups.map(function(ev){
+    var d = new Date(ev.date+'T00:00:00');
+    var mon = CAL_MNAMES[d.getMonth()];
+    var day = d.getDate();
+    return '<div class="ev-item">'
+      +'<div class="ev-badge"><div class="ev-badge-m">'+mon+'</div><div class="ev-badge-d">'+day+'</div></div>'
+      +'<div style="flex:1"><div class="ev-info-title">'+ev.title+'<span class="tag '+(clsMap[ev.type]||'tr')+' ev-tag">'+(EV_LABEL[ev.type]||'其他')+'</span></div>'+(ev.note?'<div class="ev-info-note">'+ev.note+'</div>':'')+'</div>'
+      +'<button class="ev-del" data-evid="'+ev.id+'">✕</button>'
+      +'</div>';
+  }).join('');
+  el.innerHTML = html;
+}
+
+// 刪除按鈕：只綁一次，掛在父層（不受 innerHTML 重寫影響）
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('.ev-del');
+  if(!btn) return;
+  var id = btn.getAttribute('data-evid');
+  if(!id) return;
+  calEvents = calEvents.filter(function(ev){ return ev.id !== id; });
+  saveCalEvents(calEvents);
+  renderCal();
+});
+
+function changeMonth(dir){
+  calMonth += dir;
+  if(calMonth>11){calMonth=0;calYear++;}
+  if(calMonth<0){calMonth=11;calYear--;}
+  renderCal();
+}
+
+function openCalModal(){
+  document.getElementById('cal-modal').classList.add('open');
+  const d = new Date();
+  document.getElementById('cal-ev-date').value = d.toISOString().slice(0,10);
+  setTimeout(()=>document.getElementById('cal-ev-title').focus(),100);
+}
+function closeCalModal(){ document.getElementById('cal-modal').classList.remove('open'); }
+
+function addCalEvent(){
+  const title = document.getElementById('cal-ev-title').value.trim();
+  const date = document.getElementById('cal-ev-date').value;
+  const type = document.getElementById('cal-ev-type').value;
+  const note = document.getElementById('cal-ev-note').value.trim();
+  if(!title||!date){ alert('請填寫活動名稱和日期'); return; }
+  calEvents.push({id:'e'+Date.now(), title, date, type, note});
+  saveCalEvents(calEvents);
+  closeCalModal();
+  document.getElementById('cal-ev-title').value='';
+  document.getElementById('cal-ev-note').value='';
+  renderCal();
+}
+
+// Render calendar when cal tab is active
+document.querySelectorAll && document.addEventListener('click', function(e){
+  if(e.target && e.target.classList.contains('tb')){
+    setTimeout(function(){ if(document.getElementById('sec-cal') && document.getElementById('sec-cal').classList.contains('on')) renderCal(); }, 60);
+  }
+});
+
 </script>
+
+<!-- 姓名輸入 Modal -->
+<div class="nm-overlay" id="nm-overlay">
+  <div class="nm-box">
+    <h3>請輸入您的姓名</h3>
+    <p>方便人資確認哪些同仁已閱讀此公告</p>
+    <input type="text" id="nm-input" placeholder="例如：王小明" maxlength="10" onkeydown="if(event.key==='Enter')confirmCheckin()"/>
+    <div class="nm-btns">
+      <button class="nm-cancel" onclick="closeNmModal()">取消</button>
+      <button class="nm-ok" onclick="confirmCheckin()">確認已讀</button>
+    </div>
+  </div>
+</div>
+
+<!-- 行事曆新增 Modal -->
+<div class="cal-modal-overlay" id="cal-modal">
+  <div class="cal-modal-box">
+    <h3>新增活動</h3>
+    <div class="fg"><label class="fl">活動名稱</label><input type="text" class="fi" id="cal-ev-title" placeholder="例如：Q2考核截止"/></div>
+    <div class="fg"><label class="fl">日期</label><input type="date" class="fi" id="cal-ev-date"/></div>
+    <div class="fg"><label class="fl">類型</label>
+      <select class="fs" id="cal-ev-type">
+        <option value="eval">📊 考核</option>
+        <option value="meeting">📅 會議</option>
+        <option value="other">📌 其他</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">備註（選填）</label><input type="text" class="fi" id="cal-ev-note" placeholder=""/></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="nab" style="flex:1" onclick="addCalEvent()">新增</button>
+      <button onclick="closeCalModal()" style="padding:8px 14px;border:1px solid var(--border2);border-radius:var(--r);background:transparent;cursor:pointer;font-family:inherit;color:var(--text2)">取消</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
