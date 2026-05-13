@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MeetingOS — 會議記錄系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<style>
+:root{
+  --bg:#0f0f13;--surface:#18181f;--surface2:#22222d;--surface3:#2a2a38;
+  --border:#2e2e3d;--border2:#3d3d52;
+  --text:#e8e8f0;--text2:#9090a8;--text3:#55556a;
+  --accent:#7c6ef7;--accent2:#a89cf5;
+  --teal:#2dd4a8;--amber:#f5a623;--rose:#f06090;--green:#4ade80;--blue:#60b4f0;
+  --r:10px;--rl:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.6}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 40% at 80% 10%,rgba(124,110,247,.12) 0%,transparent 60%),radial-gradient(ellipse 50% 35% at 10% 80%,rgba(45,212,168,.08) 0%,transparent 55%),radial-gradient(ellipse 40% 30% at 50% 50%,rgba(240,96,144,.05) 0%,transparent 50%);pointer-events:none;z-index:0;animation:bgS 12s ease-in-out infinite alternate}
+@keyframes bgS{0%{opacity:1;transform:scale(1)}100%{opacity:.7;transform:scale(1.05)}}
+.layout{display:flex;min-height:100vh;position:relative;z-index:1}
+
+/* SIDEBAR */
+.sidebar{width:230px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.25rem 0;position:sticky;top:0;height:100vh;overflow-y:auto}
+.logo{display:flex;align-items:center;gap:10px;padding:0 1.25rem 1.25rem;border-bottom:1px solid var(--border);margin-bottom:1rem}
+.logo-icon{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;flex-shrink:0}
+.logo-text{font-size:14px;font-weight:700;letter-spacing:.02em}
+.logo-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.nav-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.25rem .25rem;font-weight:500}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 1rem;margin:0 .25rem;border-radius:8px;font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s;border:none;background:none;width:calc(100% - .5rem);text-align:left}
+.nav-item:hover,.nav-item.active{background:rgba(124,110,247,.15);color:var(--accent2)}
+.nav-item.active{color:var(--accent)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;opacity:.7}
+.nav-badge{margin-left:auto;font-size:10px;font-family:'DM Mono',monospace;background:rgba(124,110,247,.2);color:var(--accent2);padding:1px 7px;border-radius:20px}
+.sidebar-footer{padding:1rem 1.25rem;border-top:1px solid var(--border);margin-top:auto}
+
+/* MEETING LIST in sidebar */
+.meeting-list-nav{padding:0 .5rem;flex:1;overflow-y:auto}
+.meeting-nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:3px}
+.meeting-nav-item:hover{background:var(--surface2);border-color:var(--border)}
+.meeting-nav-item.active-meeting{background:rgba(124,110,247,.12);border-color:rgba(124,110,247,.25);color:var(--accent2)}
+.meeting-nav-date{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px}
+.meeting-nav-title{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.meeting-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);flex-shrink:0}
+.meeting-nav-item.active-meeting .meeting-dot{background:var(--accent)}
+
+/* MAIN */
+.main{flex:1;padding:2rem;overflow-y:auto;max-width:900px;margin:0 auto;width:100%}
+.top-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.page-sub{font-size:13px;color:var(--text3);margin-top:3px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;font-family:'Noto Sans TC',sans-serif;padding:7px 14px;border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid var(--border2);background:var(--surface2);color:var(--text2)}
+.btn:hover{background:var(--border);color:var(--text)}
+.btn.accent{background:linear-gradient(135deg,var(--accent),#6a5cf0);border-color:transparent;color:#fff;box-shadow:0 4px 18px rgba(124,110,247,.35)}
+.btn.accent:hover{box-shadow:0 6px 24px rgba(124,110,247,.5);transform:translateY(-1px)}
+.btn.teal{background:rgba(45,212,168,.1);border-color:rgba(45,212,168,.3);color:var(--teal)}
+.btn.teal:hover{background:rgba(45,212,168,.18)}
+.btn.rose{background:rgba(240,96,144,.1);border-color:rgba(240,96,144,.3);color:var(--rose)}
+.btn.rose:hover{background:rgba(240,96,144,.18)}
+.btn.sm{padding:5px 10px;font-size:11px}
+.btn svg{width:13px;height:13px}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem 1.5rem;margin-bottom:1.25rem;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+.sh-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sh-title{font-size:14px;font-weight:500;color:var(--text)}
+.sh-badge{margin-left:auto;font-size:11px;font-family:'DM Mono',monospace;padding:2px 10px;border-radius:20px}
+.b-accent{background:rgba(124,110,247,.15);color:var(--accent2)}
+.b-amber{background:rgba(245,166,35,.12);color:var(--amber)}
+.b-green{background:rgba(74,222,128,.12);color:var(--green)}
+.b-teal{background:rgba(45,212,168,.12);color:var(--teal)}
+.b-rose{background:rgba(240,96,144,.12);color:var(--rose)}
+.b-blue{background:rgba(96,180,240,.12);color:var(--blue)}
+.d-accent{background:var(--accent)}
+.d-teal{background:var(--teal)}
+.d-amber{background:var(--amber)}
+.d-rose{background:var(--rose)}
+.d-green{background:var(--green)}
+.d-blue{background:var(--blue)}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:.875rem 1rem;transition:border-color .2s,transform .2s;cursor:default}
+.stat:hover{border-color:var(--border2);transform:translateY(-1px)}
+.stat-n{font-size:24px;font-weight:700;font-family:'DM Mono',monospace}
+.stat-l{font-size:11px;color:var(--text3);margin-top:2px}
+.c-accent .stat-n{color:var(--accent2)}
+.c-teal .stat-n{color:var(--teal)}
+.c-amber .stat-n{color:var(--amber)}
+.c-green .stat-n{color:var(--green)}
+
+/* META */
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.meta-field label{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.meta-input{width:100%;padding:8px 12px;font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Noto Sans TC',sans-serif;transition:border-color .15s}
+.meta-input:focus{outline:none;border-color:var(--accent);background:var(--surface)}
+.meta-input::placeholder{color:var(--text3)}
+input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1);opacity:.3}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:.75rem}
+.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--text3);pointer-events:none}
+.search-input{width:100%;padding:9px 12px 9px 36px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:'Noto Sans TC',sans-serif;transition:border-color .15s}
+.search-input:focus{outline:none;border-color:var(--accent)}
+.search-input::placeholder{color:var(--text3)}
+.kw-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem;min-height:4px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(124,110,247,.1);border:1px solid rgba(124,110,247,.25);color:var(--accent2);cursor:pointer;transition:background .12s}
+.chip:hover{background:rgba(124,110,247,.2)}
+
+/* ATTENDEES */
+.att-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.75rem}
+.att{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);font-size:13px;cursor:pointer;transition:all .15s}
+.att:hover{border-color:var(--border2)}
+.att.on{background:rgba(45,212,168,.08);border-color:rgba(45,212,168,.35)}
+.att-av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--border);color:var(--text2)}
+.att.on .att-av{background:rgba(45,212,168,.2);color:var(--teal)}
+.att-name{color:var(--text2)}
+.att.on .att-name{color:var(--teal)}
+.att-time{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace}
+.att-del{margin-left:4px;opacity:.2;font-size:12px;cursor:pointer}
+.att-del:hover{opacity:.9;color:var(--rose)}
+
+/* ITEMS */
+.item-list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);transition:border-color .15s}
+.item:hover{border-color:var(--border2)}
+.item.done{opacity:.45}
+.cb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border2);flex-shrink:0;margin-top:1px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.item.done .cb{background:rgba(74,222,128,.2);border-color:rgba(74,222,128,.4);color:var(--green)}
+.item-body{flex:1}
+.item-text{font-size:13px;color:var(--text);line-height:1.5}
+.item.done .item-text{text-decoration:line-through;color:var(--text3)}
+.item-sub{font-size:11px;color:var(--text3);margin-top:3px;font-family:'DM Mono',monospace}
+.item-del{font-size:13px;color:var(--text3);cursor:pointer;opacity:.25;flex-shrink:0;transition:opacity .12s;align-self:center}
+.item-del:hover{opacity:1;color:var(--rose)}
+.item-source{font-size:10px;padding:1px 7px;border-radius:20px;background:rgba(124,110,247,.1);color:var(--accent2);white-space:nowrap}
+.add-row{display:flex;gap:8px}
+.add-input,.add-item-input{padding:7px 12px;font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Noto Sans TC',sans-serif;transition:border-color .15s}
+.add-input{flex:1}
+.add-item-input{flex:1;min-width:140px}
+.add-input:focus,.add-item-input:focus{outline:none;border-color:var(--accent)}
+.add-input::placeholder,.add-item-input::placeholder{color:var(--text3)}
+.add-item-row{display:flex;gap:8px;margin-top:.875rem;flex-wrap:wrap}
+
+/* NOTES */
+.notes-area{width:100%;min-height:160px;padding:12px;font-size:13px;line-height:1.8;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'Noto Sans TC',sans-serif;resize:vertical;transition:border-color .15s}
+.notes-area:focus{outline:none;border-color:var(--accent)}
+.notes-area::placeholder{color:var(--text3)}
+
+/* FILE ZONE */
+.file-zone{border:1.5px dashed var(--border2);border-radius:10px;padding:1.75rem;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:.875rem}
+.file-zone:hover,.file-zone.drag{border-color:var(--accent);background:rgba(124,110,247,.05)}
+.fz-icon{font-size:30px;display:block;margin-bottom:.5rem}
+.fz-text{font-size:13px;color:var(--text3)}
+.fz-text span{color:var(--accent2)}
+.file-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:6px}
+.file-name{flex:1;color:var(--text)}
+.file-size{color:var(--text3);font-size:11px;font-family:'DM Mono',monospace}
+.file-ok{color:var(--teal);font-size:12px}
+
+/* SUMMARY */
+.summary-box{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--text2);line-height:1.8;min-height:80px;white-space:pre-wrap;border-left:3px solid var(--accent)}
+
+/* AI ANALYSIS */
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.analysis-col{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:1rem}
+.analysis-col-title{font-size:12px;font-weight:500;margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
+.ai-item{padding:8px 10px;border-radius:6px;background:var(--surface3);border:1px solid var(--border);margin-bottom:6px;font-size:12px;color:var(--text2);line-height:1.5;cursor:pointer;transition:border-color .15s}
+.ai-item:hover{border-color:var(--border2)}
+.ai-item .ai-src{font-size:10px;color:var(--text3);margin-top:4px;font-family:'DM Mono',monospace}
+
+/* MEETING MANAGER */
+.meeting-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1rem 1.25rem;margin-bottom:.75rem;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
+.meeting-card:hover{border-color:var(--border2);transform:translateX(3px)}
+.meeting-card.active-meeting{border-color:rgba(124,110,247,.4);background:rgba(124,110,247,.05)}
+.mc-color{width:4px;align-self:stretch;border-radius:4px;flex-shrink:0}
+.mc-body{flex:1;min-width:0}
+.mc-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-meta{font-size:11px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace}
+.mc-badges{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+.mc-badge{font-size:10px;padding:1px 7px;border-radius:20px}
+.mc-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ACCENT LINE */
+.accent-line{height:2px;border-radius:2px;margin-bottom:1rem;background:linear-gradient(90deg,var(--accent),var(--teal),var(--rose));background-size:200% 100%;animation:lineS 4s linear infinite}
+@keyframes lineS{0%{background-position:0%}100%{background-position:200%}}
+
+/* TABS */
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* LOADING */
+.loading-bar{height:3px;background:linear-gradient(90deg,var(--accent),var(--teal));background-size:200% 100%;animation:lineS 1s linear infinite;border-radius:3px;margin:8px 0}
+
+mark{background:rgba(245,166,35,.25);color:var(--amber);border-radius:2px;padding:0 2px}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.empty-state{text-align:center;padding:2rem;color:var(--text3);font-size:13px}
+.empty-state .es-icon{font-size:32px;margin-bottom:.5rem}
+@media(max-width:700px){.sidebar{display:none}.stats{grid-template-columns:repeat(2,1fr)}.analysis-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">📋</div>
+    <div><div class="logo-text">MeetingOS</div><div class="logo-sub">會議記錄系統</div></div>
+  </div>
+
+  <div class="nav-label">功能頁面</div>
+  <div style="padding:0 .5rem">
+    <button class="nav-item active" onclick="switchTab('dashboard',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      總覽儀表板
+    </button>
+    <button class="nav-item" onclick="switchTab('meetings',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      所有會議 <span class="nav-badge" id="nb-meetings">0</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('analysis',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      AI 分析 <span class="nav-badge" id="nb-ai">NEW</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('import',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      匯入檔案
+    </button>
+  </div>
+
+  <div class="nav-label" style="margin-top:.75rem">會議記錄</div>
+  <div class="meeting-list-nav" id="sidebar-meetings">
+    <div class="empty-state" style="padding:.75rem;font-size:12px">尚無會議記錄</div>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="btn accent" style="width:100%;justify-content:center" onclick="newMeeting()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      新增會議
+    </button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- DASHBOARD -->
+<div id="tab-dashboard" class="tab-content active">
+  <div class="top-bar">
+    <div><div class="page-title">總覽儀表板</div><div class="page-sub" id="clock-display"></div></div>
+    <div class="btn-row">
+      <button class="btn" onclick="switchTab('import',document.querySelectorAll('.nav-item')[3])">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        匯入檔案
+      </button>
+      <button class="btn accent" onclick="newMeeting()">+ 新增會議</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat c-accent"><div class="stat-n" id="gs-meetings">0</div><div class="stat-l">總會議數</div></div>
+    <div class="stat c-amber"><div class="stat-n" id="gs-dec">0</div><div class="stat-l">累計決策</div></div>
+    <div class="stat c-teal"><div class="stat-n" id="gs-todo">0</div><div class="stat-l">累計待辦</div></div>
+    <div class="stat c-green"><div class="stat-n" id="gs-done">0</div><div class="stat-l">已完成待辦</div></div>
+  </div>
+
+  <div class="accent-line"></div>
+
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-accent"></div><span class="sh-title">近期會議</span></div>
+    <div id="recent-meetings-list">
+      <div class="empty-state"><div class="es-icon">📭</div>尚無會議記錄，點擊「新增會議」開始</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+    <div class="card">
+      <div class="sh"><div class="sh-dot d-amber"></div><span class="sh-title">待處理決策</span><span class="sh-badge b-amber" id="d-pend-b">0</span></div>
+      <div id="d-pending-list"><div class="empty-state" style="padding:.75rem;font-size:12px">無待處理決策</div></div>
+    </div>
+    <div class="card">
+      <div class="sh"><div class="sh-dot d-green"></div><span class="sh-title">未完成待辦</span><span class="sh-badge b-green" id="t-pend-b">0</span></div>
+      <div id="t-pending-list"><div class="empty-state" style="padding:.75rem;font-size:12px">無未完成待辦</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ALL MEETINGS -->
+<div id="tab-meetings" class="tab-content">
+  <div class="top-bar">
+    <div><div class="page-title">所有會議</div><div class="page-sub">點擊會議卡片開啟編輯</div></div>
+    <div class="btn-row">
+      <button class="btn accent" onclick="newMeeting()">+ 新增會議</button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input class="search-input" id="meetings-search" placeholder="搜尋會議主題、內容..." oninput="renderMeetingsList()">
+  </div>
+  <div id="all-meetings-list"></div>
+</div>
+
+<!-- MEETING EDITOR (hidden, shown inline when editing) -->
+<div id="tab-editor" class="tab-content">
+  <div class="top-bar">
+    <div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn sm" onclick="switchTab('meetings',document.querySelectorAll('.nav-item')[1])">← 返回</button>
+        <div class="page-title" id="editor-title">編輯會議</div>
+      </div>
+      <div class="page-sub" id="editor-sub"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn rose sm" onclick="deleteMeeting()">刪除會議</button>
+      <button class="btn sm" onclick="exportSingleMD()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        匯出
+      </button>
+      <button class="btn teal sm" onclick="saveMeeting()">儲存</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="meta-grid">
+      <div class="meta-field"><label>會議主題</label><input class="meta-input" id="e-title" placeholder="Q2 產品規劃會議" oninput="autoSave()"></div>
+      <div class="meta-field"><label>日期</label><input class="meta-input" type="date" id="e-date" oninput="autoSave()"></div>
+      <div class="meta-field"><label>主持人</label><input class="meta-input" id="e-host" placeholder="姓名" oninput="autoSave()"></div>
+      <div class="meta-field"><label>開始時間</label><input class="meta-input" type="time" id="e-start" oninput="autoSave()"></div>
+      <div class="meta-field"><label>結束時間</label><input class="meta-input" type="time" id="e-end" oninput="autoSave()"></div>
+      <div class="meta-field"><label>地點 / 平台</label><input class="meta-input" id="e-loc" placeholder="Google Meet" oninput="autoSave()"></div>
+    </div>
+  </div>
+
+  <!-- attendees -->
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-teal"></div><span class="sh-title">出席打卡</span><span class="sh-badge b-teal" id="e-att-badge">0 人</span></div>
+    <div class="att-grid" id="e-att-list"></div>
+    <div class="add-row" style="margin-top:.75rem">
+      <input class="add-input" id="e-new-att" placeholder="新增與會者..." onkeydown="if(event.key==='Enter')eAddAtt()">
+      <button class="btn teal" onclick="eAddAtt()">+ 新增</button>
+    </div>
+  </div>
+
+  <!-- decisions -->
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-amber"></div><span class="sh-title">決策事項</span><span class="sh-badge b-amber" id="e-dec-badge">0 項</span></div>
+    <div class="item-list" id="e-dec-list"></div>
+    <div class="add-item-row">
+      <input class="add-item-input" id="e-new-dec" placeholder="輸入決策內容..." onkeydown="if(event.key==='Enter')eAddDec()">
+      <button class="btn" onclick="eAddDec()">+ 新增</button>
+    </div>
+  </div>
+
+  <!-- todos -->
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-green"></div><span class="sh-title">待辦事項</span><span class="sh-badge b-green" id="e-todo-badge">0/0</span></div>
+    <div class="item-list" id="e-todo-list"></div>
+    <div class="add-item-row">
+      <input class="add-item-input" id="e-new-todo" placeholder="待辦事項..." onkeydown="if(event.key==='Enter')eAddTodo()">
+      <input class="add-item-input" id="e-new-owner" placeholder="負責人" style="max-width:110px" onkeydown="if(event.key==='Enter')eAddTodo()">
+      <input class="add-item-input" id="e-new-due" type="date" style="max-width:135px">
+      <button class="btn" onclick="eAddTodo()">+ 新增</button>
+    </div>
+  </div>
+
+  <!-- notes -->
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-accent"></div><span class="sh-title">會議記錄內容</span></div>
+    <textarea class="notes-area" id="e-notes" placeholder="在此輸入會議記錄..." style="min-height:200px" oninput="autoSave()"></textarea>
+  </div>
+</div>
+
+<!-- AI ANALYSIS -->
+<div id="tab-analysis" class="tab-content">
+  <div class="top-bar">
+    <div><div class="page-title">AI 智慧分析</div><div class="page-sub">從所有會議中分析決策與待辦事項</div></div>
+    <div class="btn-row">
+      <button class="btn accent" onclick="runAnalysis()">✦ 執行分析</button>
+    </div>
+  </div>
+
+  <div class="card" id="analysis-status-card">
+    <div class="sh"><div class="sh-dot d-accent"></div><span class="sh-title">分析設定</span></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">
+        <input type="checkbox" id="opt-dec" checked style="accent-color:var(--accent)"> 提取決策事項
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">
+        <input type="checkbox" id="opt-todo" checked style="accent-color:var(--accent)"> 提取待辦事項
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer">
+        <input type="checkbox" id="opt-summary" checked style="accent-color:var(--accent)"> 生成摘要
+      </label>
+    </div>
+    <div style="font-size:12px;color:var(--text3)">分析範圍：所有 <span id="analysis-count" style="color:var(--accent2)">0</span> 場會議的記錄內容</div>
+  </div>
+
+  <div id="analysis-loading" style="display:none" class="card">
+    <div style="font-size:13px;color:var(--text2);margin-bottom:.5rem" id="analysis-loading-text">🤖 AI 分析中...</div>
+    <div class="loading-bar"></div>
+  </div>
+
+  <div id="analysis-results" style="display:none">
+    <div class="analysis-grid">
+      <div class="analysis-col">
+        <div class="analysis-col-title">
+          <span style="font-size:16px">📋</span>
+          <span style="color:var(--amber)">AI 提取決策事項</span>
+          <span class="sh-badge b-amber" id="ai-dec-count" style="margin-left:auto">0</span>
+        </div>
+        <div id="ai-dec-list"></div>
+      </div>
+      <div class="analysis-col">
+        <div class="analysis-col-title">
+          <span style="font-size:16px">✅</span>
+          <span style="color:var(--green)">AI 提取待辦事項</span>
+          <span class="sh-badge b-green" id="ai-todo-count" style="margin-left:auto">0</span>
+        </div>
+        <div id="ai-todo-list"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sh"><div class="sh-dot d-accent"></div><span class="sh-title">跨會議摘要</span></div>
+      <div class="summary-box" id="ai-summary-box" style="min-height:120px">摘要尚未生成</div>
+      <div style="display:flex;gap:8px;margin-top:.875rem">
+        <button class="btn sm" onclick="copyEl('ai-summary-box')">複製摘要</button>
+        <button class="btn sm teal" onclick="importAIResults()">✦ 匯入分析結果至當前會議</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="analysis-empty" class="card">
+    <div class="empty-state"><div class="es-icon">🔬</div>尚無會議記錄可供分析<br><span style="font-size:12px">請先新增或匯入會議記錄，再點擊「執行分析」</span></div>
+  </div>
+</div>
+
+<!-- IMPORT -->
+<div id="tab-import" class="tab-content">
+  <div class="top-bar">
+    <div><div class="page-title">匯入檔案</div><div class="page-sub">支援 .docx · .txt · .md 格式，自動建立新會議</div></div>
+  </div>
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-accent"></div><span class="sh-title">上傳會議記錄</span></div>
+    <div class="file-zone" id="dropzone"
+      onclick="document.getElementById('fileInput').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <span class="fz-icon">⬆️</span>
+      <div class="fz-text">拖曳或<span>點擊上傳</span>會議記錄</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">.docx (Word) · .txt · .md · .markdown</div>
+    </div>
+    <input type="file" id="fileInput" accept=".txt,.md,.markdown,.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple style="display:none" onchange="handleFileInput(this)">
+    <div id="import-status" style="display:none;padding:10px 14px;border-radius:8px;font-size:13px;border:1px solid;margin-bottom:.75rem"></div>
+    <div id="imported-files"></div>
+  </div>
+  <div class="card">
+    <div class="sh"><div class="sh-dot d-blue"></div><span class="sh-title">已匯入記錄</span><span class="sh-badge b-blue" id="imported-count">0 個檔案</span></div>
+    <div id="imported-list"><div class="empty-state" style="padding:.75rem;font-size:12px">尚無匯入記錄</div></div>
+  </div>
+</div>
+
+</div><!-- end main -->
+</div><!-- end layout -->
+
+<script>
+// ─── DATA ───────────────────────────────────────────
+const STORAGE_KEY='meetingos_v2';
+let DB={meetings:[]};
+let currentId=null;
+let autoSaveTimer=null;
+
+function loadDB(){
+  try{const raw=localStorage.getItem(STORAGE_KEY);if(raw)DB=JSON.parse(raw);}catch(e){}
+  if(!DB.meetings)DB.meetings=[];
+}
+function saveDB(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(DB));}catch(e){}
+}
+function genId(){return Date.now()+'_'+Math.random().toString(36).slice(2,7)}
+function p2(n){return String(n).padStart(2,'0')}
+function nowStr(){const d=new Date();return p2(d.getHours())+':'+p2(d.getMinutes())}
+function todayStr(){return new Date().toISOString().split('T')[0]}
+
+// ─── CLOCK ───────────────────────────────────────────
+function updateClock(){
+  const d=new Date();
+  const el=document.getElementById('clock-display');
+  if(el)el.textContent=d.toLocaleDateString('zh-TW',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+' '+p2(d.getHours())+':'+p2(d.getMinutes());
+}
+updateClock();setInterval(updateClock,30000);
+
+// ─── TAB SWITCHING ────────────────────────────────────
+function switchTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('tab-'+id);if(el)el.classList.add('active');
+  if(btn)btn.classList.add('active');
+  renderAll();
+}
+
+// ─── MEETING CRUD ──────────────────────────────────────
+function newMeeting(){
+  const id=genId();
+  const m={
+    id,title:'新會議',date:todayStr(),host:'',loc:'',start:'',end:'',
+    attendees:[],decisions:[],todos:[],notes:'',
+    createdAt:Date.now(),updatedAt:Date.now()
+  };
+  DB.meetings.unshift(m);
+  saveDB();
+  openEditor(id);
+}
+
+function openEditor(id){
+  currentId=id;
+  const m=DB.meetings.find(x=>x.id===id);if(!m)return;
+  // fill fields
+  v('e-title',m.title);v('e-date',m.date);v('e-host',m.host);
+  v('e-loc',m.loc);v('e-start',m.start);v('e-end',m.end);
+  v('e-notes',m.notes||'');
+  document.getElementById('editor-title').textContent=m.title||'新會議';
+  document.getElementById('editor-sub').textContent=m.date||'';
+  renderEditorAtt();renderEditorDec();renderEditorTodo();
+  // highlight sidebar
+  document.querySelectorAll('.meeting-nav-item').forEach(x=>x.classList.remove('active-meeting'));
+  const si=document.querySelector(`.meeting-nav-item[data-id="${id}"]`);
+  if(si)si.classList.add('active-meeting');
+  switchTab('editor',null);
+}
+
+function v(id,val){const el=document.getElementById(id);if(el)el.value=val??'';}
+function g(id){const el=document.getElementById(id);return el?el.value:'';}
+
+function saveMeeting(){
+  if(!currentId)return;
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  m.title=g('e-title')||'（未命名）';
+  m.date=g('e-date');m.host=g('e-host');m.loc=g('e-loc');
+  m.start=g('e-start');m.end=g('e-end');m.notes=g('e-notes');
+  m.updatedAt=Date.now();
+  saveDB();renderAll();
+  document.getElementById('editor-title').textContent=m.title;
+  document.getElementById('editor-sub').textContent=m.date;
+}
+
+function autoSave(){
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(saveMeeting,800);
+}
+
+function deleteMeeting(){
+  if(!currentId)return;
+  if(!confirm('確定要刪除這場會議記錄嗎？'))return;
+  DB.meetings=DB.meetings.filter(x=>x.id!==currentId);
+  currentId=null;saveDB();
+  switchTab('meetings',document.querySelectorAll('.nav-item')[1]);
+}
+
+// ─── EDITOR – ATTENDEES ────────────────────────────────
+function renderEditorAtt(){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const el=document.getElementById('e-att-list');if(!el)return;
+  el.innerHTML='';
+  m.attendees.forEach((a,i)=>{
+    const d=document.createElement('div');
+    d.className='att'+(a.checked?' on':'');
+    d.innerHTML=`<div class="att-av">${a.name[0]||'?'}</div><span class="att-name">${a.name}</span>${a.checked?`<span class="att-time">${a.time}</span>`:''}<span class="att-del" onclick="event.stopPropagation();eDelAtt(${i})">✕</span>`;
+    d.onclick=()=>eToggleAtt(i);
+    el.appendChild(d);
+  });
+  const on=m.attendees.filter(a=>a.checked).length;
+  const el2=document.getElementById('e-att-badge');if(el2)el2.textContent=on+'/'+m.attendees.length+' 人';
+}
+function eToggleAtt(i){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  m.attendees[i].checked=!m.attendees[i].checked;
+  m.attendees[i].time=m.attendees[i].checked?nowStr():'';
+  saveDB();renderEditorAtt();
+}
+function eAddAtt(){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const inp=document.getElementById('e-new-att');
+  const n=inp.value.trim();if(!n)return;
+  m.attendees.push({name:n,checked:false,time:''});
+  inp.value='';saveDB();renderEditorAtt();
+}
+function eDelAtt(i){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  m.attendees.splice(i,1);saveDB();renderEditorAtt();
+}
+
+// ─── EDITOR – DECISIONS ────────────────────────────────
+function renderEditorDec(){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const el=document.getElementById('e-dec-list');if(!el)return;
+  el.innerHTML='';
+  m.decisions.forEach((d,i)=>{
+    const div=document.createElement('div');
+    div.className='item';
+    div.innerHTML=`<div class="cb" style="border-color:var(--amber);color:var(--amber);cursor:default">✓</div><div class="item-body"><div class="item-text">${d.text}</div><div class="item-sub">${d.time||''}</div></div><span class="item-del" onclick="eDelDec(${i})">✕</span>`;
+    el.appendChild(div);
+  });
+  const el2=document.getElementById('e-dec-badge');if(el2)el2.textContent=m.decisions.length+' 項';
+}
+function eAddDec(){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const inp=document.getElementById('e-new-dec');
+  const t=inp.value.trim();if(!t)return;
+  m.decisions.push({text:t,time:nowStr()});
+  inp.value='';saveDB();renderEditorDec();
+}
+function eDelDec(i){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  m.decisions.splice(i,1);saveDB();renderEditorDec();
+}
+
+// ─── EDITOR – TODOS ────────────────────────────────────
+function renderEditorTodo(){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const el=document.getElementById('e-todo-list');if(!el)return;
+  el.innerHTML='';
+  m.todos.forEach((t,i)=>{
+    const div=document.createElement('div');
+    div.className='item'+(t.done?' done':'');
+    div.innerHTML=`<div class="cb" onclick="eToggleTodo(${i})">${t.done?'✓':''}</div><div class="item-body"><div class="item-text">${t.text}</div><div class="item-sub">${t.owner?'@'+t.owner:''}${t.due?' · '+t.due:''}</div></div><span class="item-del" onclick="eDelTodo(${i})">✕</span>`;
+    el.appendChild(div);
+  });
+  const done=m.todos.filter(t=>t.done).length;
+  const el2=document.getElementById('e-todo-badge');if(el2)el2.textContent=done+'/'+m.todos.length;
+}
+function eToggleTodo(i){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  m.todos[i].done=!m.todos[i].done;saveDB();renderEditorTodo();
+}
+function eAddTodo(){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const t=g('e-new-todo').trim();if(!t)return;
+  const o=g('e-new-owner').trim();const d=g('e-new-due');
+  m.todos.push({text:t,owner:o,due:d,done:false});
+  v('e-new-todo','');v('e-new-owner','');v('e-new-due','');
+  saveDB();renderEditorTodo();
+}
+function eDelTodo(i){
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  m.todos.splice(i,1);saveDB();renderEditorTodo();
+}
+
+// ─── RENDER ALL ────────────────────────────────────────
+function renderAll(){
+  renderSidebarMeetings();renderDashboard();renderMeetingsList();
+  updateGlobalStats();renderImportedList();
+  const el=document.getElementById('analysis-count');
+  if(el)el.textContent=DB.meetings.length;
+  const nb=document.getElementById('nb-meetings');
+  if(nb)nb.textContent=DB.meetings.length;
+}
+
+function renderSidebarMeetings(){
+  const el=document.getElementById('sidebar-meetings');if(!el)return;
+  if(!DB.meetings.length){el.innerHTML='<div class="empty-state" style="padding:.75rem;font-size:12px">尚無會議記錄</div>';return;}
+  el.innerHTML='';
+  DB.meetings.slice(0,15).forEach(m=>{
+    const d=document.createElement('div');
+    d.className='meeting-nav-item'+(m.id===currentId?' active-meeting':'');
+    d.setAttribute('data-id',m.id);
+    d.innerHTML=`<div class="meeting-dot"></div><div><div class="meeting-nav-title">${m.title||'未命名'}</div><div class="meeting-nav-date">${m.date||'—'}</div></div>`;
+    d.onclick=()=>openEditor(m.id);
+    el.appendChild(d);
+  });
+}
+
+function updateGlobalStats(){
+  const ms=DB.meetings;
+  setText('gs-meetings',ms.length);
+  setText('gs-dec',ms.reduce((a,m)=>a+(m.decisions||[]).length,0));
+  const todos=ms.flatMap(m=>m.todos||[]);
+  setText('gs-todo',todos.length);
+  setText('gs-done',todos.filter(t=>t.done).length);
+}
+
+function setText(id,v){const el=document.getElementById(id);if(el)el.textContent=v;}
+
+function renderDashboard(){
+  // recent meetings
+  const rl=document.getElementById('recent-meetings-list');
+  if(rl){
+    if(!DB.meetings.length){rl.innerHTML='<div class="empty-state"><div class="es-icon">📭</div>尚無會議記錄，點擊「新增會議」開始</div>';
+    } else {
+      rl.innerHTML='';
+      DB.meetings.slice(0,5).forEach(m=>{
+        const d=document.createElement('div');
+        d.className='meeting-card'+(m.id===currentId?' active-meeting':'');
+        const colors=['var(--accent)','var(--teal)','var(--amber)','var(--rose)','var(--blue)'];
+        const ci=DB.meetings.indexOf(m)%colors.length;
+        d.innerHTML=`<div class="mc-color" style="background:${colors[ci]}"></div>
+          <div class="mc-body">
+            <div class="mc-title">${m.title||'未命名'}</div>
+            <div class="mc-meta">${m.date||'—'} ${m.host?'· '+m.host:''}</div>
+            <div class="mc-badges">
+              <span class="mc-badge b-amber">${(m.decisions||[]).length} 決策</span>
+              <span class="mc-badge b-green">${(m.todos||[]).filter(t=>t.done).length}/${(m.todos||[]).length} 待辦</span>
+              ${m.attendees&&m.attendees.filter(a=>a.checked).length?`<span class="mc-badge b-teal">${m.attendees.filter(a=>a.checked).length} 人出席</span>`:''}
+            </div>
+          </div>
+          <div class="mc-actions"><button class="btn sm" onclick="event.stopPropagation();openEditor('${m.id}')">開啟</button></div>`;
+        d.onclick=()=>openEditor(m.id);
+        rl.appendChild(d);
+      });
+    }
+  }
+
+  // pending decisions (last 5)
+  const dl=document.getElementById('d-pending-list');
+  if(dl){
+    const all=DB.meetings.flatMap(m=>(m.decisions||[]).map(d=>({...d,mtitle:m.title,mid:m.id})));
+    setText('d-pend-b',all.length);
+    if(!all.length){dl.innerHTML='<div class="empty-state" style="padding:.75rem;font-size:12px">無決策事項</div>';
+    } else {
+      dl.innerHTML='';
+      all.slice(-5).reverse().forEach(d=>{
+        const div=document.createElement('div');div.className='ai-item';
+        div.innerHTML=`${d.text}<div class="ai-src">📂 ${d.mtitle||'未命名'}</div>`;
+        div.onclick=()=>openEditor(d.mid);
+        dl.appendChild(div);
+      });
+    }
+  }
+
+  // pending todos
+  const tl=document.getElementById('t-pending-list');
+  if(tl){
+    const all=DB.meetings.flatMap(m=>(m.todos||[]).filter(t=>!t.done).map(t=>({...t,mtitle:m.title,mid:m.id})));
+    setText('t-pend-b',all.length);
+    if(!all.length){tl.innerHTML='<div class="empty-state" style="padding:.75rem;font-size:12px">所有待辦已完成 🎉</div>';
+    } else {
+      tl.innerHTML='';
+      all.slice(0,5).forEach(t=>{
+        const div=document.createElement('div');div.className='ai-item';
+        div.innerHTML=`${t.text}${t.owner?` <span style="color:var(--accent2);font-size:11px">@${t.owner}</span>`:''}${t.due?` <span style="color:var(--text3);font-size:11px">${t.due}</span>`:''}<div class="ai-src">📂 ${t.mtitle||'未命名'}</div>`;
+        div.onclick=()=>openEditor(t.mid);
+        tl.appendChild(div);
+      });
+    }
+  }
+}
+
+function renderMeetingsList(){
+  const el=document.getElementById('all-meetings-list');if(!el)return;
+  const q=(document.getElementById('meetings-search')||{}).value||'';
+  const filtered=DB.meetings.filter(m=>!q||(m.title+m.notes+m.host).toLowerCase().includes(q.toLowerCase()));
+  if(!filtered.length){el.innerHTML='<div class="empty-state"><div class="es-icon">🔍</div>無符合的會議記錄</div>';return;}
+  el.innerHTML='';
+  const colors=['var(--accent)','var(--teal)','var(--amber)','var(--rose)','var(--blue)'];
+  filtered.forEach((m,idx)=>{
+    const d=document.createElement('div');
+    d.className='meeting-card'+(m.id===currentId?' active-meeting':'');
+    const ci=idx%colors.length;
+    d.innerHTML=`<div class="mc-color" style="background:${colors[ci]}"></div>
+      <div class="mc-body">
+        <div class="mc-title">${m.title||'未命名'}</div>
+        <div class="mc-meta">${m.date||'—'} ${m.host?'· '+m.host:''} ${m.loc?'· '+m.loc:''}</div>
+        <div class="mc-badges">
+          <span class="mc-badge b-amber">${(m.decisions||[]).length} 決策</span>
+          <span class="mc-badge b-green">${(m.todos||[]).filter(t=>t.done).length}/${(m.todos||[]).length} 待辦</span>
+          ${m.attendees&&m.attendees.filter(a=>a.checked).length?`<span class="mc-badge b-teal">${m.attendees.filter(a=>a.checked).length} 人出席</span>`:''}
+          ${m.notes?`<span class="mc-badge b-accent">${m.notes.length} 字記錄</span>`:''}
+        </div>
+      </div>
+      <div class="mc-actions">
+        <button class="btn sm rose" onclick="event.stopPropagation();delM('${m.id}')">刪除</button>
+        <button class="btn sm" onclick="event.stopPropagation();exportSingleMDById('${m.id}')">匯出</button>
+        <button class="btn sm teal" onclick="event.stopPropagation();openEditor('${m.id}')">開啟</button>
+      </div>`;
+    el.appendChild(d);
+  });
+}
+function delM(id){
+  if(!confirm('確定刪除此會議？'))return;
+  DB.meetings=DB.meetings.filter(x=>x.id!==id);
+  if(currentId===id)currentId=null;
+  saveDB();renderAll();
+}
+
+// ─── IMPORT ────────────────────────────────────────────
+function handleFileInput(inp){
+  Array.from(inp.files).forEach(f=>processImport(f));
+  inp.value='';
+}
+function handleDrop(e){
+  e.preventDefault();document.getElementById('dropzone').classList.remove('drag');
+  Array.from(e.dataTransfer.files).forEach(f=>processImport(f));
+}
+function processImport(f){
+  const ext=f.name.split('.').pop().toLowerCase();
+  showImportStatus('⏳ 正在匯入 '+f.name+'...', 'loading');
+  if(ext==='docx'){
+    const r=new FileReader();
+    r.onload=e=>{
+      if(typeof mammoth==='undefined'){showImportStatus('❌ mammoth 載入失敗，請重試','error');return;}
+      mammoth.extractRawText({arrayBuffer:e.target.result})
+        .then(result=>createMeetingFromText(result.value,f.name,'Word'))
+        .catch(err=>showImportStatus('❌ 解析失敗：'+err.message,'error'));
+    };
+    r.readAsArrayBuffer(f);
+  } else {
+    const r=new FileReader();
+    r.onload=e=>createMeetingFromText(e.target.result,f.name,'文字');
+    r.readAsText(f,'UTF-8');
+  }
+}
+
+function createMeetingFromText(text,filename,type){
+  const name=filename.replace(/\.[^.]+$/,'');
+  const id=genId();
+  const m={id,title:name,date:todayStr(),host:'',loc:'',start:'',end:'',
+    attendees:[],decisions:[],todos:[],notes:text,
+    importedFrom:filename,importType:type,
+    createdAt:Date.now(),updatedAt:Date.now()};
+  DB.meetings.unshift(m);
+  saveDB();renderAll();
+  showImportStatus(`✓ 已匯入「${name}」(${type}檔)，記錄已建立`,'success');
+  addImportedFile(filename,text.length,type,id);
+}
+
+function showImportStatus(msg,type){
+  const el=document.getElementById('import-status');if(!el)return;
+  el.style.display='block';
+  const styles={
+    loading:{bg:'rgba(124,110,247,.08)',bc:'rgba(124,110,247,.3)',c:'var(--accent2)'},
+    success:{bg:'rgba(45,212,168,.08)',bc:'rgba(45,212,168,.3)',c:'var(--teal)'},
+    error:{bg:'rgba(240,96,144,.08)',bc:'rgba(240,96,144,.3)',c:'var(--rose)'},
+  };
+  const s=styles[type]||styles.loading;
+  el.style.background=s.bg;el.style.borderColor=s.bc;el.style.color=s.c;
+  el.textContent=msg;
+}
+
+let importedFiles=[];
+function addImportedFile(name,chars,type,id){
+  importedFiles.unshift({name,chars,type,id,time:nowStr()});
+  renderImportedList();
+}
+function renderImportedList(){
+  const el=document.getElementById('imported-list');if(!el)return;
+  setText('imported-count',importedFiles.length+' 個檔案');
+  if(!importedFiles.length){el.innerHTML='<div class="empty-state" style="padding:.75rem;font-size:12px">尚無匯入記錄</div>';return;}
+  el.innerHTML='';
+  importedFiles.forEach(f=>{
+    const d=document.createElement('div');d.className='file-item';
+    d.innerHTML=`<span style="font-size:16px">${f.type==='Word'?'📝':'📄'}</span>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${f.chars} 字</span>
+      <span style="font-size:10px;padding:1px 7px;border-radius:20px;background:rgba(124,110,247,.12);color:var(--accent2)">${f.type}</span>
+      <span class="file-ok">✓ ${f.time}</span>
+      <button class="btn sm" style="margin-left:4px" onclick="openEditor('${f.id}')">開啟</button>`;
+    el.appendChild(d);
+  });
+}
+
+// ─── AI ANALYSIS ───────────────────────────────────────
+let lastAnalysis=null;
+
+async function runAnalysis(){
+  if(!DB.meetings.length){
+    document.getElementById('analysis-empty').style.display='block';
+    document.getElementById('analysis-results').style.display='none';
+    return;
+  }
+  const optDec=document.getElementById('opt-dec').checked;
+  const optTodo=document.getElementById('opt-todo').checked;
+  const optSummary=document.getElementById('opt-summary').checked;
+
+  document.getElementById('analysis-loading').style.display='block';
+  document.getElementById('analysis-results').style.display='none';
+  document.getElementById('analysis-empty').style.display='none';
+
+  // build prompt from all meetings
+  const allText=DB.meetings.map((m,i)=>`
+=== 第${i+1}場：${m.title||'未命名'} (${m.date||'日期未知'}) ===
+主持人：${m.host||'—'}
+出席：${(m.attendees||[]).filter(a=>a.checked).map(a=>a.name).join('、')||'未記錄'}
+已記錄決策：${(m.decisions||[]).map(d=>d.text).join('；')||'無'}
+已記錄待辦：${(m.todos||[]).map(t=>t.text+(t.owner?' @'+t.owner:'')).join('；')||'無'}
+會議記錄內容：
+${m.notes||'（無）'}
+`).join('\n');
+
+  const tasks=[];
+  if(optDec)tasks.push('提取所有決策事項（每項一行，格式：「[來源會議名] 決策內容」）');
+  if(optTodo)tasks.push('提取所有待辦事項（每項一行，格式：「[來源會議名] 待辦內容 | 負責人（如有）| 期限（如有）」）');
+  if(optSummary)tasks.push('生成一份跨會議的整合摘要（150-200字）');
+
+  const prompt=`以下是${DB.meetings.length}場會議的完整記錄，請以繁體中文分析並完成以下任務：
+
+任務：
+${tasks.map((t,i)=>`${i+1}. ${t}`).join('\n')}
+
+請以 JSON 格式回覆，格式如下：
+{
+  "decisions": ["[會議名] 決策內容", ...],
+  "todos": ["[會議名] 待辦 | 負責人 | 期限", ...],
+  "summary": "摘要文字"
+}
+
+只輸出 JSON，不要其他文字。
+
+會議資料：
+${allText}`;
+
+  setAnalysisLoadingText('🤖 正在分析 '+DB.meetings.length+' 場會議...');
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const raw=data.content.map(c=>c.text||'').join('');
+    let parsed={decisions:[],todos:[],summary:''};
+    try{
+      const clean=raw.replace(/```json|```/g,'').trim();
+      parsed=JSON.parse(clean);
+    }catch(e){parsed.summary=raw;}
+    lastAnalysis=parsed;
+    showAnalysisResults(parsed,optDec,optTodo,optSummary);
+  }catch(err){
+    setAnalysisLoadingText('❌ 分析失敗：'+err.message);
+    setTimeout(()=>{document.getElementById('analysis-loading').style.display='none';},3000);
+  }
+}
+
+function setAnalysisLoadingText(t){
+  const el=document.getElementById('analysis-loading-text');if(el)el.textContent=t;
+}
+
+function showAnalysisResults(parsed,optDec,optTodo,optSummary){
+  document.getElementById('analysis-loading').style.display='none';
+  document.getElementById('analysis-results').style.display='block';
+
+  // decisions
+  const dl=document.getElementById('ai-dec-list');
+  if(dl){
+    dl.innerHTML='';
+    const decs=parsed.decisions||[];
+    setText('ai-dec-count',decs.length);
+    if(!decs.length){dl.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:.5rem">未提取到決策</div>';}
+    else{decs.forEach(d=>{
+      const src=d.match(/^\[(.+?)\]/)?.[1]||'';
+      const text=d.replace(/^\[.+?\]\s*/,'');
+      const div=document.createElement('div');div.className='ai-item';
+      div.innerHTML=`${text}${src?`<div class="ai-src">📂 ${src}</div>`:''}`;
+      dl.appendChild(div);
+    });}
+  }
+
+  // todos
+  const tl=document.getElementById('ai-todo-list');
+  if(tl){
+    tl.innerHTML='';
+    const todos=parsed.todos||[];
+    setText('ai-todo-count',todos.length);
+    if(!todos.length){tl.innerHTML='<div style="font-size:12px;color:var(--text3);text-align:center;padding:.5rem">未提取到待辦</div>';}
+    else{todos.forEach(t=>{
+      const parts=t.split('|').map(x=>x.trim());
+      const src=parts[0].match(/^\[(.+?)\]/)?.[1]||'';
+      const text=parts[0].replace(/^\[.+?\]\s*/,'');
+      const owner=parts[1]||'';const due=parts[2]||'';
+      const div=document.createElement('div');div.className='ai-item';
+      div.innerHTML=`${text}${owner?` <span style="color:var(--accent2);font-size:11px">@${owner}</span>`:''}${due?` <span style="color:var(--text3);font-size:11px">${due}</span>`:''}${src?`<div class="ai-src">📂 ${src}</div>`:''}`;
+      tl.appendChild(div);
+    });}
+  }
+
+  // summary
+  const sb=document.getElementById('ai-summary-box');
+  if(sb)sb.textContent=parsed.summary||'（未生成摘要）';
+}
+
+function importAIResults(){
+  if(!lastAnalysis)return;
+  if(!currentId){alert('請先開啟或建立一場會議，再匯入分析結果。');return;}
+  const m=DB.meetings.find(x=>x.id===currentId);if(!m)return;
+  const decs=(lastAnalysis.decisions||[]).map(d=>({text:d.replace(/^\[.+?\]\s*/,''),time:nowStr()}));
+  const todos=(lastAnalysis.todos||[]).map(t=>{
+    const p=t.split('|').map(x=>x.trim());
+    return{text:p[0].replace(/^\[.+?\]\s*/,''),owner:p[1]||'',due:p[2]||'',done:false};
+  });
+  m.decisions.push(...decs);
+  m.todos.push(...todos);
+  saveDB();
+  if(currentId)renderEditorDec(),renderEditorTodo();
+  alert(`已匯入 ${decs.length} 項決策、${todos.length} 項待辦至當前會議。`);
+}
+
+// ─── EXPORT ────────────────────────────────────────────
+function exportSingleMD(){exportSingleMDById(currentId);}
+function exportSingleMDById(id){
+  const m=DB.meetings.find(x=>x.id===id);if(!m)return;
+  const att=m.attendees.map(a=>`- ${a.name} ${a.checked?'✓ '+a.time:'（缺席）'}`).join('\n');
+  const decs=(m.decisions||[]).map(d=>`- ${d.text}`).join('\n')||'無';
+  const todos=(m.todos||[]).map(t=>`- [${t.done?'x':' '}] ${t.text}${t.owner?' @'+t.owner:''}${t.due?' 期限：'+t.due:''}`).join('\n')||'無';
+  const md=`# ${m.title||'會議記錄'}\n\n| 項目 | 內容 |\n|------|------|\n| 日期 | ${m.date||'—'} |\n| 地點 | ${m.loc||'—'} |\n| 主持人 | ${m.host||'—'} |\n| 時間 | ${m.start||'—'} – ${m.end||'—'} |\n\n## 出席人員\n${att||'無'}\n\n## 決策事項\n${decs}\n\n## 待辦事項\n${todos}\n\n## 會議記錄\n${m.notes||'無'}\n`;
+  const blob=new Blob([md],{type:'text/markdown'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`${m.title||'meeting'}_${m.date||'record'}.md`;a.click();
+}
+
+function copyEl(id){
+  const t=(document.getElementById(id)||{}).textContent||'';
+  navigator.clipboard.writeText(t).catch(()=>{});
+}
+
+// ─── INIT ──────────────────────────────────────────────
+loadDB();renderAll();
+</script>
+</body>
+</html>
